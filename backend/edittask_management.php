@@ -383,6 +383,111 @@ switch ($action) {
             }
             exit;
             break;
+    case 'fetch_calendar_events':
+        $start_date = $_GET['start'] ?? date('Y-m-d');
+        $end_date = $_GET['end'] ?? date('Y-m-d');
+        
+        $sql = "SELECT 
+                    t.*,
+                    GROUP_CONCAT(
+                        CONCAT(u.fname, ' ', COALESCE(u.mname, ''), ' ', u.lname)
+                        SEPARATOR ', '
+                    ) as assigned_users
+                FROM tasks t
+                LEFT JOIN task_assignments ta ON t.task_id = ta.task_id
+                LEFT JOIN users u ON ta.user_id = u.user_id
+                WHERE t.task_date BETWEEN ? AND ?
+                GROUP BY t.task_id
+                ORDER BY t.task_date, t.start_time";
+        
+        $stmt = mysqli_prepare($conn, $sql);
+        mysqli_stmt_bind_param($stmt, "ss", $start_date, $end_date);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        
+        $tasks = [];
+        while ($row = mysqli_fetch_assoc($result)) {
+            $tasks[] = [
+                'task_id' => $row['task_id'],
+                'task_name' => $row['task_name'] . "\n(" . $row['assigned_users'] . ")",
+                'task_date' => $row['task_date'],
+                'start_time' => $row['start_time'],
+                'end_time' => $row['end_time']
+            ];
+        }
+        
+        $response['success'] = true;
+        $response['data'] = $tasks;
+        break;
+    
+    case 'update_task_datetime':
+        $task_id = $_POST['task_id'] ?? 0;
+        $task_date = $_POST['task_date'] ?? '';
+        $start_time = $_POST['start_time'] ?? '';
+        $end_time = $_POST['end_time'] ?? '';
+        
+        // Validate the times
+        if (strtotime($start_time) >= strtotime($end_time)) {
+            $response['success'] = false;
+            $response['message'] = 'End time must be after start time.';
+            break;
+        }
+        
+        // Check for conflicts
+        $sql = "SELECT COUNT(*) as conflict_count 
+                FROM tasks 
+                WHERE task_id != ? 
+                AND task_date = ?
+                AND (
+                    (start_time <= ? AND end_time > ?) OR
+                    (start_time < ? AND end_time >= ?) OR
+                    (start_time >= ? AND end_time <= ?)
+                )";
+                
+        $stmt = mysqli_prepare($conn, $sql);
+        mysqli_stmt_bind_param($stmt, "isssssss", 
+            $task_id, 
+            $task_date, 
+            $end_time, 
+            $start_time,
+            $end_time,
+            $start_time,
+            $start_time,
+            $end_time
+        );
+        mysqli_stmt_execute($stmt);
+        $conflict_result = mysqli_stmt_get_result($stmt);
+        $conflict_count = mysqli_fetch_assoc($conflict_result)['conflict_count'];
+        
+        if ($conflict_count > 0) {
+            $response['success'] = false;
+            $response['message'] = 'Time slot conflicts with existing tasks.';
+            break;
+        }
+        
+        // Update the task
+        $update_sql = "UPDATE tasks 
+                        SET task_date = ?, 
+                            start_time = ?, 
+                            end_time = ?
+                        WHERE task_id = ?";
+                        
+        $stmt = mysqli_prepare($conn, $update_sql);
+        mysqli_stmt_bind_param($stmt, "sssi", 
+            $task_date, 
+            $start_time, 
+            $end_time, 
+            $task_id
+        );
+        
+        if (mysqli_stmt_execute($stmt)) {
+            $response['success'] = true;
+            $response['message'] = 'Task updated successfully.';
+        } else {
+            $response['success'] = false;
+            $response['message'] = 'Failed to update task.';
+        }
+        break;
     default:
         $response['message'] = 'Invalid action.';
         break;

@@ -1,3 +1,5 @@
 Create Task, createtask_management, 17, 1, fa-solid fa-list-check, 2@
 Calendar Task Viewer, calendar_taskviewer, 17, 1, fa-solid fa-calendar-days, 1@
 Task Lists, edittask_management, 17, 3, fa-solid fa-gears, 1@
+Calendar Tasks, calendar_tasks_management, 18, 1, fa-regular fa-calendar, 1@
+Assigned Tasks, assigned_tasks, 18, 2, fa-solid fa-list-check, 1@
