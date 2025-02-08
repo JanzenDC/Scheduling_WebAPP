@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 08, 2025 at 03:41 AM
+-- Generation Time: Feb 08, 2025 at 10:41 AM
 -- Server version: 10.4.11-MariaDB
 -- PHP Version: 7.4.4
 
@@ -43,7 +43,8 @@ CREATE TABLE `modules` (
 INSERT INTO `modules` (`id`, `module_name`, `module_alias`, `sequence_number`, `created_at`, `updated_at`) VALUES
 (4, 'Accounts & Roles', 'account_management', 99, '2025-01-17 12:45:12', '2025-01-21 16:08:11'),
 (13, 'Authorization Management', 'authorization_management', 100, '2025-01-17 14:43:43', '2025-01-21 16:08:24'),
-(17, 'Task Management', 'task_management', 98, '2025-02-08 01:49:58', '2025-02-08 01:49:58');
+(17, 'Task Management', 'task_management', 98, '2025-02-08 01:49:58', '2025-02-08 01:49:58'),
+(18, 'My Tasks', 'my_tasks', 97, '2025-02-08 07:31:37', '2025-02-08 07:31:37');
 
 -- --------------------------------------------------------
 
@@ -100,7 +101,11 @@ INSERT INTO `pages` (`page_id`, `icon`, `page_name`, `page_alias`, `module_id`, 
 (8, 'fa-solid fa-gear', 'Permissions', 'permission_management', 13, 1, '1', '2025-01-18 02:14:10', '2025-01-18 02:14:10'),
 (12, 'fa-solid fa-user', 'Roles', 'roles_management', 4, 2, '1', '2025-01-18 04:03:20', '2025-01-18 04:03:20'),
 (13, 'fa-regular fa-note-sticky', 'Assign Roles', 'assign_roles', 4, 3, '1', '2025-01-19 01:57:03', '2025-01-19 01:57:03'),
-(52, 'fa-solid fa-list-check', 'Create Task', 'createtask_management', 17, 1, '1', '2025-02-08 01:54:17', '2025-02-08 01:54:17');
+(52, 'fa-solid fa-list-check', 'Create Task', 'createtask_management', 17, 2, '1', '2025-02-08 01:54:17', '2025-02-08 03:28:30'),
+(53, 'fa-solid fa-calendar-days', 'Calendar Task Viewer', 'calendar_taskviewer', 17, 1, '1', '2025-02-08 03:28:23', '2025-02-08 03:28:36'),
+(54, 'fa-solid fa-gears', 'Tasks Lists', 'edittask_management', 17, 3, '1', '2025-02-08 05:08:48', '2025-02-08 05:34:48'),
+(55, 'fa-regular fa-calendar', 'Calendar Tasks', 'calendar_tasks_management', 18, 1, '1', '2025-02-08 07:33:19', '2025-02-08 07:33:19'),
+(56, 'fa-solid fa-list-check', 'Assigned Tasks', 'assigned_tasks', 18, 2, '1', '2025-02-08 07:34:16', '2025-02-08 07:34:16');
 
 -- --------------------------------------------------------
 
@@ -179,7 +184,7 @@ CREATE TABLE `tasks` (
 --
 
 INSERT INTO `tasks` (`task_id`, `task_name`, `description`, `task_date`, `start_time`, `end_time`, `created_at`) VALUES
-(1, 'Birthday Ko', 'test', '2025-02-08', '10:14:00', '23:15:00', '2025-02-08 02:14:59');
+(1, 'Birthday Ko', 'test', '2025-02-08', '10:14:00', '23:15:00', '2025-02-09 02:14:59');
 
 -- --------------------------------------------------------
 
@@ -198,8 +203,8 @@ CREATE TABLE `task_assignments` (
 --
 
 INSERT INTO `task_assignments` (`assignment_id`, `task_id`, `user_id`) VALUES
-(1, 1, 1),
-(2, 1, 4);
+(8, 1, 1),
+(9, 1, 4);
 
 -- --------------------------------------------------------
 
@@ -230,7 +235,8 @@ CREATE TABLE `users` (
 
 INSERT INTO `users` (`user_id`, `fname`, `mname`, `lname`, `email`, `password`, `date_of_birth`, `phone_number`, `address`, `city`, `state`, `postal_code`, `country`, `created_at`) VALUES
 (1, 'Nexus', 'Capstone', 'Maker', 'nexusph@gmail.com', '$2y$10$cu/7k25Qj9SJkRJ15RYKkOrE96YF827kUt3H0yUhlKBFRow1aMVIW', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2024-12-22 15:16:48'),
-(4, 'Janzen', 'Agarin', 'Dela Cruz', 'meniski2345@gmail.com', '$2y$10$yTGdvn7BCnCoH/eIJXIk1e8h51pw7E/Whozv/aGXelBVsYzQ.n7PC', NULL, '09123456789', 'test', 'test', 'test', NULL, 'test', '2025-01-18 05:50:28');
+(4, 'Janzen', 'Agarin', 'Dela Cruz', 'meniski2345@gmail.com', '$2y$10$yTGdvn7BCnCoH/eIJXIk1e8h51pw7E/Whozv/aGXelBVsYzQ.n7PC', NULL, '09123456789', 'test', 'test', 'test', NULL, 'test', '2025-01-18 05:50:28'),
+(6, 'test', 'test', 'test', 'test@gmail.com', '$2y$10$Qkm/XdC9lFbF2PDyct0B6OpfbWHctvr0xCESgEpD8B7KReFEdX5Hm', NULL, '09123456789', 'test', 'test', 'test', NULL, 'test', '2025-02-08 09:15:55');
 
 -- --------------------------------------------------------
 
@@ -329,7 +335,7 @@ ALTER TABLE `user_roles`
 -- AUTO_INCREMENT for table `modules`
 --
 ALTER TABLE `modules`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `module_permissions`
@@ -341,7 +347,7 @@ ALTER TABLE `module_permissions`
 -- AUTO_INCREMENT for table `pages`
 --
 ALTER TABLE `pages`
-  MODIFY `page_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=53;
+  MODIFY `page_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
 
 --
 -- AUTO_INCREMENT for table `page_permissions`
@@ -365,13 +371,13 @@ ALTER TABLE `tasks`
 -- AUTO_INCREMENT for table `task_assignments`
 --
 ALTER TABLE `task_assignments`
-  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `user_roles`
