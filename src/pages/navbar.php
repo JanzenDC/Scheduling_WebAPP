@@ -8,7 +8,6 @@
                 </svg>
             </button>
             <a href="dashboard.php?page=dashboard" class="text-lg font-bold hidden ms-[250px] md:block">Scheduling <span class='text-[#044389]'>System</span></a>
-            <a href="dashboard.php?page=dashboard" class="text-lg font-bold md:hidden block">S<span class='text-[#044389]'>S</span></a>
         </div>
 
         <!-- Right Section: Date & Time -->
