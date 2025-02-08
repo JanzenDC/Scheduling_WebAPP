@@ -6,6 +6,7 @@ function fetchUsers() {
         url: BASE_URL + 'backend/createtask_management.php?action=fetch_users',
         type: 'GET',
         success: function(response) {
+            console.log(response)
             if (response.success) {
                 displayUsers(response.data);
             } else {
@@ -23,14 +24,32 @@ function displayUsers(users) {
     userContainer.empty();
     
     users.forEach(user => {
+        const isSuggested = user.suggestion_tag !== undefined;
+        const starIcon = isSuggested ? `<i class="fa fa-star blinking-star"></i>` : '';
+        const priorityLabel = isSuggested ? `<span class="priority-label text-xs text-white bg-red-500 px-2 py-1 rounded-full ml-2">Suggestion</span>` : '';
+        
+        const availabilityLabel = user.availability === 'Not Available' ? 
+            `<span class="availability-label text-xs text-white bg-gray-500 px-2 py-1 rounded-full">Not Available</span>` :
+            `<span class="availability-label text-xs text-white bg-green-500 px-2 py-1 rounded-full">Available</span>`;
+        
+        const selectButton = user.availability !== 'Not Available' ? ` 
+            <button class="select-user-btn px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-md">
+                Select
+            </button>
+        ` : '';
+
         const userElement = `
             <div class="user-item p-3 border rounded-lg hover:bg-gray-50" data-user-id="${user.id}">
                 <div class="flex items-center justify-between">
-                    <span class="text-sm font-medium text-gray-900">${user.name}</span>
-                    <button class="select-user-btn px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-md">
-                        Select
-                    </button>
+                    <div class="flex items-center">
+                        <span class="text-sm font-medium text-gray-900">
+                            ${user.name} ${starIcon}
+                        </span>
+                        ${priorityLabel}
+                    </div>
+                    ${availabilityLabel}
                 </div>
+                ${selectButton}
             </div>
         `;
         userContainer.append(userElement);
@@ -44,6 +63,10 @@ function displayUsers(users) {
         });
     });
 }
+
+
+
+
 
 let selectedUsers = [];
 

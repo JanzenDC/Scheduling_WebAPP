@@ -62,7 +62,24 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-beta.1/js/select2.min.js"></script>
 
 <style>
-        .select2-result-user {
+    @keyframes blink {
+        0% { opacity: 0; }
+        50% { opacity: 1; }
+        100% { opacity: 0; }
+    }
+    .priority-label {
+    margin-left: 5px;
+    }
+
+    .availability-label {
+        margin-left: 5px;
+    }
+    .blinking-star {
+        color: gold; /* Change the color to your preference */
+        animation: blink 1s infinite;
+    }
+
+    .select2-result-user {
         padding: 4px;
     }
     .select2-result-user .user-name {
