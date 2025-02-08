@@ -103,7 +103,7 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
     .ui-dialog-titlebar {
-        background-color: #5044e4;
+        background-color: #044389;
         color: white;
         font-size: 18px;
         font-weight: bold;
@@ -121,7 +121,7 @@
         padding: 10px;
     }
     .ui-dialog-buttonpane button {
-        background-color: #5044e4;
+        background-color: #044389;
         color: white;
         border: none;
         padding: 10px 20px;

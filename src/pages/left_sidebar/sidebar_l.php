@@ -20,7 +20,7 @@
 
 <ul class="flex flex-col text-sm font-sans  ">
     <div class='flex justify-center items-center'>
-        <image src="../../resources/images/company_logo.png" class='w-[150px] p-3'></image>
+        <image src="../../resources/images/1738888990405-removebg-preview-removebg-preview.png" class='w-[150px] p-3'></image>
     </div>
 
     <li class="py-1 justify-center mt-2 hover:bg-[#3cc5dd] rounded-md">

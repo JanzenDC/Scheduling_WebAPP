@@ -7,8 +7,8 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                 </svg>
             </button>
-            <a href="dashboard.php?page=dashboard" class="text-lg font-bold hidden ms-[250px] md:block">Wealth<span class='text-indigo-600'>Invest</span></a>
-            <a href="dashboard.php?page=dashboard" class="text-lg font-bold md:hidden block">W<span class='text-indigo-600'>I</span></a>
+            <a href="dashboard.php?page=dashboard" class="text-lg font-bold hidden ms-[250px] md:block">Scheduling <span class='text-[#044389]'>System</span></a>
+            <a href="dashboard.php?page=dashboard" class="text-lg font-bold md:hidden block">S<span class='text-[#044389]'>S</span></a>
         </div>
 
         <!-- Right Section: Date & Time -->

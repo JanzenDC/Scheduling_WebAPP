@@ -18,7 +18,7 @@ include_once 'authorization_management/n_js.php';
             <i class="fa-regular fa-user"></i>
         </span>
     </div>
-    <button class='save-permissions gap-3 bg-green-600 hover:bg-green-700 text-white rounded-lg w-[100px] flex p-2 items-center justify-center cursor-pointer'>
+    <button class='save-permissions gap-3 bg-green-600 hover:bg-[#044389] text-white rounded-lg w-[100px] flex p-2 items-center justify-center cursor-pointer'>
         <i class="fa-solid fa-floppy-disk"></i> Save
     </button>
 </div>

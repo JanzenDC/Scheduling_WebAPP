@@ -288,16 +288,16 @@ $(document).ready(function() {
     const currentPage = window.location.search;
     $('a').each(function() {
         if ($(this).attr('href') && $(this).attr('href').includes(currentPage)) {
-            $(this).closest('li').addClass('bg-[#fefeff] rounded-md text-indigo-700');
+            $(this).closest('li').addClass('bg-[#fefeff] rounded-md text-[#044389]');
 
              // Change the text of the link when selected
              if ($(this).text().includes('Add Module')) {
                 // Change the text
-                $(this).addClass('rounded-md text-indigo-700'); // Change text color to red (you can change the color code)
+                $(this).addClass('rounded-md text-[#044389]'); // Change text color to red (you can change the color code)
             }
             if ($(this).text().includes('Add Pages')) {
                 // Change the text
-                $(this).addClass(' rounded-md text-indigo-700 hover:bg-[#3cc5dd]'); // Change text color to red (you can change the color code)
+                $(this).addClass(' rounded-md text-[#044389] hover:bg-[#3cc5dd]'); // Change text color to red (you can change the color code)
             }
            
             

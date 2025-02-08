@@ -6,7 +6,7 @@ $(document).ready(function() {
     if (userPermissions.can_add === 1) {
         const addUserButton = `
             <div class="mb-4">
-                <button onclick="addUser()" class="bg-green-700 text-white px-4 py-2 rounded-md hover:bg-green-500 focus:outline-none">
+                <button onclick="addUser()" class="bg-[#044389] text-white px-4 py-2 rounded-md hover:bg-[#3cc5dd] focus:outline-none">
                     <i class="fas fa-plus"></i> Add User
                 </button>
             </div>
@@ -15,7 +15,7 @@ $(document).ready(function() {
 
         const addRoleButton = `
             <div class="mb-4">
-                <button onclick="addRole()" class="bg-green-700 text-white px-4 py-2 rounded-md hover:bg-green-500 focus:outline-none">
+                <button onclick="addRole()" class="bg-[#044389] text-white px-4 py-2 rounded-md hover:bg-[#3cc5dd] focus:outline-none">
                     <i class="fas fa-plus"></i> Add Role
                 </button>
             </div>
@@ -79,7 +79,7 @@ function displayUsers(data) {
                     <button class="action-btn bg-red-500 text-white px-3 py-1 text-xs rounded-md hover:bg-red-700 focus:outline-none mr-2" onclick="deleteUser(${user.user_id})" data-toggle="tooltip" data-placement="top" title="Delete">
                         <i class="fas fa-trash"></i>
                     </button>
-                    <button class="action-btn bg-green-500 text-white px-3 py-1 text-xs rounded-md hover:bg-green-700 focus:outline-none" onclick="regeneratePassword(${user.user_id})" data-toggle="tooltip" data-placement="top" title="Regenerate Password">
+                    <button class="action-btn bg-green-500 text-white px-3 py-1 text-xs rounded-md hover:bg-[#044389] focus:outline-none" onclick="regeneratePassword(${user.user_id})" data-toggle="tooltip" data-placement="top" title="Regenerate Password">
                         <i class="fas fa-key"></i>
                     </button>
                 </td>

@@ -76,67 +76,45 @@ if (isset($_SESSION['user']['id'])) {
 
 
 </head>
-
-
-<!-- <body class="bg-black dark:bg-black text-white">
-    <div class="flex items-center justify-center min-h-screen ">
-        <div class="bg-gray-800 p-6 rounded-lg shadow-lg w-[500px]">
-            <h2 class="text-2xl mb-4">Login</h2>
-            <form id="loginForm">
-                <div class="mb-4">
-                    <label for="email" class="block text-sm font-medium">Email</label>
-                    <input type="email" id="email" name="email" class="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div class="mb-4">
-                    <label for="password" class="block text-sm font-medium">Password</label>
-                    <input type="password" id="password" name="password" class="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Login</button>
-                Don't have an account? <a href="src/index_register.php" class="text-blue-400 hover:underline">Register</a>
-            </form>
-        </div>
-    </div>
-</body> -->
-
-<body class="bg-[#044389] flex items-center justify-center min-h-screen">
+<body class="flex items-center justify-center min-h-screen" style="background-image: url('resources/images/background.jpg'), linear-gradient(to right, rgba(0, 68, 137, 0.7), rgba(0, 204, 221, 0.7)); background-size: cover; background-position: center center; background-attachment: fixed;">
   <div class="bg-white shadow-lg rounded-lg p-8 max-w-md w-full">
-   <div class="flex justify-center mb-6">
-    <img alt="Company logo placeholder image" class="w-24 h-24" height="100" src="resources/images/cropped-logo_favicon.png" width="100"/>
-    <img alt="Company logo placeholder image" class="w-24 h-24" height="100" src="resources/images/1738888990405-removebg-preview-removebg-preview.png" width="100"/>
-
-   </div>
-   <h2 class="text-2xl font-bold text-center mb-6">
-    Login to Your Account
-   </h2>
-   <form id="loginForm">
-    <div class="mb-4">
-     <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
-      Email
-     </label>
-     <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="email" name="email" placeholder="Email" type="email"/>
+    <div class="flex justify-center mb-6">
+      <img alt="Company logo placeholder image" class="w-24 h-24" height="100" src="resources/images/cropped-logo_favicon.png" width="100"/>
+      <img alt="Company logo placeholder image" class="w-24 h-24" height="100" src="resources/images/1738888990405-removebg-preview-removebg-preview.png" width="100"/>
     </div>
-    <div class="mb-6">
-     <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
-      Password
-     </label>
-     <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline" id="password" name="password" placeholder="Password" type="password"/>
+    <h2 class="text-2xl font-bold text-center mb-6">
+      Login to Your Account
+    </h2>
+    <form id="loginForm">
+      <div class="mb-4">
+        <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
+          Email
+        </label>
+        <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="email" name="email" placeholder="Email" type="email"/>
+      </div>
+      <div class="mb-6">
+        <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
+          Password
+        </label>
+        <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline" id="password" name="password" placeholder="Password" type="password"/>
+      </div>
+      <div class="flex items-center justify-center">
+        <button class="bg-[#044389] hover:bg-[#3cc5dd] text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
+          Login
+        </button>
+      </div>
+    </form>
+    <div class="text-center mt-6">
+      <p class="text-gray-700 text-sm">
+        Don't have an account?
+        <a href="src/index_register.php" class="text-[#044389] hover:text-indigo-800 font-bold">
+          Register
+        </a>
+      </p>
     </div>
-    <div class="flex items-center justify-center">
-     <button class="bg-[#044389] hover:bg-[#3cc5dd] text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
-      Login
-     </button>
-    </div>
-   </form>
-   <div class="text-center mt-6">
-    <p class="text-gray-700 text-sm">
-     Don't have an account?
-     <a href="src/index_register.php" class="text-indigo-600 hover:text-indigo-800 font-bold" href="#">
-      Register
-     </a>
-    </p>
-   </div>
   </div>
- </body>
+</body>
+
 
 
 </html>

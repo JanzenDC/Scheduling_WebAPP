@@ -18,7 +18,7 @@ include_once 'module_management/n_js.php';
 
 <div class='flex justify-between items-center'>
     <!-- Add Module Button -->
-    <div onclick='AddModule()' class='text-white bg-green-600 p-1 rounded-md cursor-pointer hover:bg-green-700 transition duration-200 text-xs flex items-center justify-center w-32'>
+    <div onclick='AddModule()' class='text-white bg-green-600 p-1 rounded-md cursor-pointer hover:bg-[#044389] transition duration-200 text-xs flex items-center justify-center w-32'>
         <i class="fa-solid fa-plus mr-1 text-sm"></i> 
         <span class="text-sm">Add Module</span>
     </div>

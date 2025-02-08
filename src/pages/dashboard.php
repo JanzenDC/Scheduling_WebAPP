@@ -26,7 +26,7 @@ require 'main_query.php';
         <!-- Main Content -->
         <div id="main-content" class="flex-1 md:ml-64 mt-20 transition-all duration-300 ease-in-out">
             <div class="bg-white p-6 rounded-lg shadow-md h-full">
-                <div class='bg-[#212121] text-white p-2 rounded-lg mb-4'>
+                <div class='bg-[#044389] text-white p-2 rounded-lg mb-4'>
 
                 
                     <?php
