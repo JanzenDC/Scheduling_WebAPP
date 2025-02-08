@@ -168,14 +168,14 @@ switch ($action) {
 
             try {
                 // Directory setup for page
-                $baseDir = $_SERVER['DOCUMENT_ROOT'] . '/nexusph/src/pages/';
+                $baseDir = $_SERVER['DOCUMENT_ROOT'] . '/Scheduling_WebAPP/src/pages/';
                 $moduleDir = $baseDir . $moduleAlias;
             
                 if (!file_exists($moduleDir)) {
                     mkdir($moduleDir, 0755, true);
                 }
             
-                $backendDir = $_SERVER['DOCUMENT_ROOT'] . '/nexusph/backend/';
+                $backendDir = $_SERVER['DOCUMENT_ROOT'] . '/Scheduling_WebAPP/backend/';
                 if (!file_exists($backendDir)) {
                     mkdir($backendDir, 0755, true);
                 }
