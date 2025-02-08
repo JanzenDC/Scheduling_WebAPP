@@ -148,9 +148,9 @@ switch ($action) {
                                 </ul>
                                 <p>Use the above credentials to login to your account and get started.</p>
                                 <p>If you have any questions, feel free to reach out to our support team.</p>
-                                <p>Best regards,<br>Your Company Name</p>
+                                <p>Best regards,<br>Scheduling System Dev Team</p>
                                 <div class='footer'>
-                                    <p>&copy; 2025 Your Company Name. All rights reserved.</p>
+                                    <p>&copy; 2025 Scheduling System Dev Team. All rights reserved.</p>
                                 </div>
                             </div>
                         </body>
@@ -159,13 +159,13 @@ switch ($action) {
                 $sendSmtpEmail = new SendSmtpEmail([
                     'sender' => [
                         'email' => 'janzendelacruz28@gmail.com',  // Add the sender email here
-                        'name' => 'NexusPH'
+                        'name' => 'Scheduling System'
                     ],
                     'to' => [[
                         'email' => $email,
                         'name' => "$fname $lname"
                     ]],
-                    'subject' => 'Welcome to NexusPH!',
+                    'subject' => 'Welcome to Scheduling System!',
                     'htmlContent' => $emailContent,
                     'headers' => [
                         'Some-Custom-Header' => 'unique-id-1234'
@@ -248,9 +248,9 @@ switch ($action) {
                             </ul>
                             <p>Use the new password to log in to your account.</p>
                             <p>If you have any issues, feel free to contact our support team.</p>
-                            <p>Best regards,<br>Your Company Name</p>
+                            <p>Best regards,<br>Scheduling System Dev Team</p>
                             <div class='footer'>
-                                <p>&copy; 2025 Your Company Name. All rights reserved.</p>
+                                <p>&copy; 2025 Scheduling System Dev Team. All rights reserved.</p>
                             </div>
                         </div>
                     </body>
@@ -260,7 +260,7 @@ switch ($action) {
             $sendSmtpEmail = new SendSmtpEmail([
                 'sender' => [
                     'email' => 'no-reply@yourdomain.com',  // Replace with your sender email
-                    'name' => 'Your Company Name'
+                    'name' => 'Scheduling System Dev Team'
                 ],
                 'to' => [[
                     'email' => $email,

@@ -1,7 +1,6 @@
 <script>
 const BASE_URL = '<?php echo $baseUrl; ?>';
 
-// Fetch and display users
 function fetchUsers() {
     $.ajax({
         url: BASE_URL + 'backend/createtask_management.php?action=fetch_users',
@@ -19,7 +18,6 @@ function fetchUsers() {
     });
 }
 
-// Display users in the selection area
 function displayUsers(users) {
     const userContainer = $('#peopleInvolved');
     userContainer.empty();
@@ -38,7 +36,6 @@ function displayUsers(users) {
         userContainer.append(userElement);
     });
 
-    // Initialize search functionality
     $('#userSearch').on('input', function() {
         const searchTerm = $(this).val().toLowerCase();
         $('.user-item').each(function() {
@@ -48,7 +45,6 @@ function displayUsers(users) {
     });
 }
 
-// Handle user selection
 let selectedUsers = [];
 
 $(document).on('click', '.select-user-btn', function() {
@@ -67,7 +63,6 @@ $(document).on('click', '.select-user-btn', function() {
     updateSelectedUsersList();
 });
 
-// Update selected users display
 function updateSelectedUsersList() {
     const selectedList = $('#selectedUsers');
     selectedList.empty();
@@ -93,19 +88,19 @@ function removeUser(userId) {
         .text('Select');
     updateSelectedUsersList();
 }
+
 function displayConflicts(conflicts) {
     const conflictContainer = $('#conflictContainer');
-    conflictContainer.removeClass('hidden'); // Make the conflict section visible
+    conflictContainer.removeClass('hidden');
 
     const conflictTable = $('#conflictTable');
-    conflictTable.empty(); // Clear any previous conflicts
+    conflictTable.empty();
 
     if (conflicts.length === 0) {
         conflictTable.append('<p class="text-gray-700">No conflicts found.</p>');
         return;
     }
 
-    // Create a table structure with Tailwind CSS classes
     let table = `
         <table class="min-w-full bg-white border border-gray-200 rounded-lg">
             <thead class="bg-gray-50">
@@ -131,10 +126,9 @@ function displayConflicts(conflicts) {
     });
 
     table += `</tbody></table>`;
-    conflictTable.append(table); // Append the table to the conflictContainer
+    conflictTable.append(table);
 }
 
-// Check for conflicts
 function checkConflicts() {
     if (!validateForm()) return;
 
@@ -163,13 +157,12 @@ function checkConflicts() {
     });
 }
 
-// Create the task
 function createTask() {
     if (!validateForm()) return;
     
     const taskData = {
         task_name: $('#taskName').val(),
-        description: $('#taskDescription').val(), // New field
+        description: $('#taskDescription').val(),
         task_date: $('#taskDate').val(),
         start_time: $('#startTime').val(),
         end_time: $('#endTime').val(),
@@ -184,6 +177,7 @@ function createTask() {
         success: function(response) {
             if (response.success) {
                 showNotification('success', 'Task created successfully');
+                addTaskToCalendar(response.data);
                 resetForm();
             } else {
                 showNotification('error', response.message);
@@ -195,7 +189,19 @@ function createTask() {
     });
 }
 
-// Form validation
+function addTaskToCalendar(task) {
+    const event = {
+        title: task.task_name,
+        start: task.start_time,
+        end: task.end_time,
+        description: task.description,
+        assigned_users: task.assigned_users,
+        id: task.id
+    };
+
+    $('#calendarTask').fullCalendar('renderEvent', event);
+}
+
 function validateForm() {
     const taskName = $('#taskName').val();
     const taskDate = $('#taskDate').val();
@@ -215,7 +221,6 @@ function validateForm() {
     return true;
 }
 
-// Show notification
 function showNotification(type, message) {
     const notificationArea = $('#notificationArea');
     const bgColor = type === 'error' ? 'bg-red-100' : 'bg-green-100';
@@ -226,7 +231,7 @@ function showNotification(type, message) {
             <div class="flex">
                 <div class="flex-shrink-0">
                     ${type === 'error' 
-                        ? '<svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>'
+                        ? '<svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>' 
                         : '<svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>'}
                 </div>
                 <div class="ml-3">
@@ -241,10 +246,9 @@ function showNotification(type, message) {
     }, 3000);
 }
 
-// Reset form
 function resetForm() {
     $('#taskName').val('');
-    $('#taskDescription').val(''); // New field
+    $('#taskDescription').val('');
     $('#taskDate').val('');
     $('#startTime').val('');
     $('#endTime').val('');
@@ -253,11 +257,55 @@ function resetForm() {
     $('#conflictsArea').empty();
     $('.select-user-btn').removeClass('selected bg-blue-100').text('Select');
 }
+function fetchTasks() {
+    $.ajax({
+        url: BASE_URL + 'backend/createtask_management.php?action=fetch_tasks',
+        type: 'GET',
+        success: function(response) {
+            if (response.success) {
+                loadTasksIntoCalendar(response.data);
+            } else {
+                showNotification('error', response.message);
+            }
+        },
+        error: function() {
+            showNotification('error', 'Failed to fetch tasks');
+        }
+    });
+}
 
-// Initialize
+function loadTasksIntoCalendar(tasks) {
+    const events = tasks.map(task => {
+        const startDateTime = new Date(task.task_date + ' ' + task.start_time);
+        const endDateTime = new Date(task.task_date + ' ' + task.end_time);
+
+        return {
+            title: task.task_name,
+            start: startDateTime,
+            end: endDateTime,
+            description: task.description,
+            assigned_users: task.assigned_users,
+            id: task.id
+        };
+    });
+    $('#calendarTask').fullCalendar('addEventSource', events);
+}
+
+
 $(document).ready(function() {
     fetchUsers();
-    
+    fetchTasks();
+    $('#calendarTask').fullCalendar({
+        header: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'month,agendaWeek,agendaDay'
+        },
+        editable: true,
+        height: 700,
+        contentHeight: 'auto'
+    });
+
     $('#checkConflicts').click(checkConflicts);
     $('#createTask').click(createTask);
 });

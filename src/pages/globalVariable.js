@@ -320,18 +320,7 @@ $(document).ready(function() {
         },
         editable: true,
         height: 700, // Adjust the height of the calendar
-        contentHeight: 'auto', // Automatically adjusts the content height
-        // events: [
-        //     {
-        //         title: 'Event 1',
-        //         start: '2025-01-10'
-        //     },
-        //     {
-        //         title: 'Event 2',
-        //         start: '2025-01-15',
-        //         end: '2025-01-17'
-        //     }
-        // ]
+        contentHeight: 'auto'
     });
 });
 
