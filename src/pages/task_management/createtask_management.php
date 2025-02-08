@@ -21,7 +21,7 @@ include_once 'task_management/n_js.php';
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                         placeholder="Enter task description here..."></textarea>
             </div>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label for="taskDate" class="block text-sm font-medium text-gray-700">Date</label>
@@ -98,6 +98,13 @@ include_once 'task_management/n_js.php';
                 </button>
             </div>
         </div>
+    </div>
+</div>
+
+<div id="conflictContainer" class="hidden mt-6 p-4 bg-white rounded-lg shadow-md">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Conflict(s) Found</h3>
+    <div id="conflictTable" class="overflow-x-auto">
+        <!-- Conflicts will be dynamically inserted here -->
     </div>
 </div>
 

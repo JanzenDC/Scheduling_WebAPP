@@ -93,6 +93,46 @@ function removeUser(userId) {
         .text('Select');
     updateSelectedUsersList();
 }
+function displayConflicts(conflicts) {
+    const conflictContainer = $('#conflictContainer');
+    conflictContainer.removeClass('hidden'); // Make the conflict section visible
+
+    const conflictTable = $('#conflictTable');
+    conflictTable.empty(); // Clear any previous conflicts
+
+    if (conflicts.length === 0) {
+        conflictTable.append('<p class="text-gray-700">No conflicts found.</p>');
+        return;
+    }
+
+    // Create a table structure with Tailwind CSS classes
+    let table = `
+        <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Time</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Time</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+    `;
+
+    conflicts.forEach(conflict => {
+        table += `
+            <tr>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${conflict.user_name}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${conflict.task_name}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${conflict.start_time}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${conflict.end_time}</td>
+            </tr>
+        `;
+    });
+
+    table += `</tbody></table>`;
+    conflictTable.append(table); // Append the table to the conflictContainer
+}
 
 // Check for conflicts
 function checkConflicts() {
