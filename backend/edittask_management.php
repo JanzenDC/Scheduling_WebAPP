@@ -6,6 +6,7 @@ header('Access-Control-Allow-Headers: Content-Type');
 header('Content-Type: application/json');
 
 require '../config.php'; 
+require_once('../vendor/tecnickcom/tcpdf/tcpdf.php');
 
 $response = [
     'success' => false,
@@ -238,6 +239,150 @@ switch ($action) {
             $response['message'] = 'Error updating task: ' . $e->getMessage();
         }
         break;
+    case 'view_pdf':
+        case 'download_pdf':
+            $task_id = $_GET['task_id'] ?? 0;
+            
+            // Fetch task details
+            $sql = "SELECT 
+                        t.*, 
+                        GROUP_CONCAT(
+                            CONCAT(u.fname, ' ', COALESCE(u.mname, ''), ' ', u.lname, 
+                            ' (', COALESCE(r.role_name, 'No Position Assigned'), ')')
+                            SEPARATOR '\n'
+                        ) as assigned_users
+                    FROM tasks t
+                    LEFT JOIN task_assignments ta ON t.task_id = ta.task_id
+                    LEFT JOIN users u ON ta.user_id = u.user_id
+                    LEFT JOIN user_roles ur ON u.user_id = ur.user_id
+                    LEFT JOIN roles r ON ur.role_id = r.role_id
+                    WHERE t.task_id = ?
+                    GROUP BY t.task_id";
+            
+            $stmt = mysqli_prepare($conn, $sql);
+            mysqli_stmt_bind_param($stmt, "i", $task_id);
+            mysqli_stmt_execute($stmt);
+            $result = mysqli_stmt_get_result($stmt);
+            $task = mysqli_fetch_assoc($result);
+        
+            if (!$task) {
+                die('Task not found');
+            }
+
+            class MYPDF extends TCPDF {
+                public function Header() {
+                    $this->SetFont('helvetica', 'B', 16);
+                    
+                    $image_file_left = '../resources/images/1738888990405-removebg-preview-removebg-preview.png';
+                    $this->Image($image_file_left, 10, 10, 18);  // Adjusted width to 30mm
+            
+                    $image_file_right = '../resources/images/cropped-logo_favicon.png';
+                    $this->Image($image_file_right, 35, 10, 18);  // Adjusted width to 30mm
+                    
+                    $this->Cell(0, 15, 'Task Details', 0, true, 'C');
+                    $this->Ln(10);
+                }
+            
+                public function Footer() {
+                    $this->SetY(-15);
+                    $this->SetFont('helvetica', 'I', 8);
+                    $this->Cell(0, 10, 'Page ' . $this->getAliasNumPage() . '/' . $this->getAliasNbPages(), 0, false, 'C');
+                }
+            }
+            
+            
+            
+            
+        
+            $pdf = new MYPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+        
+            // Set document information
+            $pdf->SetCreator(PDF_CREATOR);
+            $pdf->SetAuthor('Your Company Name');
+            $pdf->SetTitle('Task Details - ' . $task['task_name']);
+        
+            // Set default header data
+            $pdf->SetHeaderData(PDF_HEADER_LOGO, PDF_HEADER_LOGO_WIDTH, PDF_HEADER_TITLE, PDF_HEADER_STRING);
+        
+            // Set margins
+            $pdf->SetMargins(PDF_MARGIN_LEFT, PDF_MARGIN_TOP, PDF_MARGIN_RIGHT);
+            $pdf->SetHeaderMargin(PDF_MARGIN_HEADER);
+            $pdf->SetFooterMargin(PDF_MARGIN_FOOTER);
+        
+            // Set auto page breaks
+            $pdf->SetAutoPageBreak(TRUE, PDF_MARGIN_BOTTOM);
+        
+            // Add a page
+            $pdf->AddPage();
+        
+            // Set font
+            $pdf->SetFont('helvetica', '', 12);
+        
+            // Content
+            $pdf->SetFont('helvetica', 'B', 14);
+            $pdf->Cell(0, 10, 'Task Information', 0, 1);
+            $pdf->SetFont('helvetica', '', 12);
+            $pdf->Ln(5);
+        
+            // Task Details Table
+            $pdf->SetFillColor(240, 240, 240);
+            $pdf->SetFont('helvetica', 'B', 12);
+            
+            // Task Name
+            $pdf->Cell(40, 10, 'Task Name:', 0, 0, 'L', true);
+            $pdf->SetFont('helvetica', '', 12);
+            $pdf->Cell(0, 10, $task['task_name'], 0, 1, 'L', true);
+
+                        
+            // Date
+            $pdf->SetFont('helvetica', 'B', 12);
+            $pdf->Cell(40, 10, 'Date:', 0, 0, 'L');
+            $pdf->SetFont('helvetica', '', 12);
+            $pdf->Cell(0, 10, date('F d, Y', strtotime($task['task_date'])), 0, 1, 'L');
+            
+            // Time
+            $pdf->SetFont('helvetica', 'B', 12);
+            $pdf->Cell(40, 10, 'Time:', 0, 0, 'L', true);
+            $pdf->SetFont('helvetica', '', 12);
+            $pdf->Cell(0, 10, 
+                date('h:i A', strtotime($task['start_time'])) . ' - ' . 
+                date('h:i A', strtotime($task['end_time'])), 
+                0, 1, 'L', true
+            );
+        
+            // Created Date
+            $pdf->SetFont('helvetica', 'B', 12);
+            $pdf->Cell(40, 10, 'Created:', 0, 0, 'L');
+            $pdf->SetFont('helvetica', '', 12);
+            $pdf->Cell(0, 10, date('F d, Y h:i A', strtotime($task['created_at'])), 0, 1, 'L');
+        
+            // Task Name
+            $pdf->Cell(40, 10, 'Task Description:', 0, 0, 'L', true);
+            $pdf->SetFont('helvetica', '', 12);
+            $pdf->Cell(0, 10, $task['description'], 0, 1, 'L', true);
+            // Assigned Users
+            $pdf->Ln(10);
+            $pdf->SetFont('helvetica', 'B', 14);
+            $pdf->Cell(0, 10, 'Assigned Users', 0, 1);
+            $pdf->SetFont('helvetica', '', 12);
+            $pdf->Ln(5);
+        
+            $assigned_users = explode("\n", $task['assigned_users']);
+            foreach ($assigned_users as $user) {
+                if (!empty($user)) {
+                    $pdf->Cell(10, 10, '•', 0, 0);
+                    $pdf->MultiCell(0, 10, $user, 0, 'L');
+                }
+            }
+        
+            // Output PDF
+            if ($_GET['action'] === 'download_pdf') {
+                $pdf->Output('Task_Details_' . $task_id . '.pdf', 'D');
+            } else {
+                $pdf->Output('Task_Details_' . $task_id . '.pdf', 'I');
+            }
+            exit;
+            break;
     default:
         $response['message'] = 'Invalid action.';
         break;

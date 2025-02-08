@@ -236,18 +236,38 @@ function saveTaskEdit() {
         }
     });
 }
-function viewTask(targetID){
-    const title = "Edit Tasks";
+function viewTask(targetID) {
+    const title = "View Task Details";
     $("#dialog_emp").remove();
     $('body').append("<div id='dialog_emp'></div>");
-    SYS_dialog2('#dialog_emp', '400', '450', title, function() {
-    });
+    SYS_dialog2('#dialog_emp', '400', '800', title, function() {});
 
     const str = `
-
+        <div class="p-4">
+            <iframe 
+                id="taskPdfFrame"
+                src="${BASE_URL}backend/edittask_management.php?action=view_pdf&task_id=${targetID}"
+                width="100%"
+                height="500px"
+                frameborder="0"
+                style="border: 1px solid #ddd; border-radius: 4px;"
+            ></iframe>
+        </div>
+        <div class="text-center mt-4">
+            <button 
+                onclick="downloadTaskPDF(${targetID})" 
+                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+            >
+                Download PDF
+            </button>
+        </div>
     `;
 
-    $("#dialog_emp").html(str).dialog("open");    
+    $("#dialog_emp").html(str).dialog("open");
+}
+
+function downloadTaskPDF(taskID) {
+    window.open(`${BASE_URL}backend/edittask_management.php?action=download_pdf&task_id=${taskID}`, '_blank');
 }
 
 function deleteTask(targetID) {
