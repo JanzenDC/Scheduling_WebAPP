@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 07, 2025 at 04:16 PM
+-- Generation Time: Feb 08, 2025 at 03:41 AM
 -- Server version: 10.4.11-MariaDB
 -- PHP Version: 7.4.4
 
@@ -42,7 +42,8 @@ CREATE TABLE `modules` (
 
 INSERT INTO `modules` (`id`, `module_name`, `module_alias`, `sequence_number`, `created_at`, `updated_at`) VALUES
 (4, 'Accounts & Roles', 'account_management', 99, '2025-01-17 12:45:12', '2025-01-21 16:08:11'),
-(13, 'Authorization Management', 'authorization_management', 100, '2025-01-17 14:43:43', '2025-01-21 16:08:24');
+(13, 'Authorization Management', 'authorization_management', 100, '2025-01-17 14:43:43', '2025-01-21 16:08:24'),
+(17, 'Task Management', 'task_management', 98, '2025-02-08 01:49:58', '2025-02-08 01:49:58');
 
 -- --------------------------------------------------------
 
@@ -99,17 +100,7 @@ INSERT INTO `pages` (`page_id`, `icon`, `page_name`, `page_alias`, `module_id`, 
 (8, 'fa-solid fa-gear', 'Permissions', 'permission_management', 13, 1, '1', '2025-01-18 02:14:10', '2025-01-18 02:14:10'),
 (12, 'fa-solid fa-user', 'Roles', 'roles_management', 4, 2, '1', '2025-01-18 04:03:20', '2025-01-18 04:03:20'),
 (13, 'fa-regular fa-note-sticky', 'Assign Roles', 'assign_roles', 4, 3, '1', '2025-01-19 01:57:03', '2025-01-19 01:57:03'),
-(38, 'fa-solid fa-user', 'Profile Details', 'profile_details', 17, 2, '1', '2025-01-24 04:37:29', '2025-01-24 04:37:29'),
-(39, 'fa-solid fa-diagram-project', 'Projects', 'project_management', 17, 1, '1', '2025-01-24 04:37:29', '2025-01-24 04:37:29'),
-(41, 'fa-solid fa-desktop', 'Monitoring', 'monitoring_management', 16, 1, '1', '2025-01-30 02:58:08', '2025-01-30 02:58:08'),
-(42, 'fa-solid fa-gears', 'Shift Management', 'shift_management', 16, 2, '1', '2025-01-30 02:58:08', '2025-01-30 02:58:08'),
-(43, 'fa-regular fa-clock', 'Time Sheet', 'timesheet_management', 16, 3, '1', '2025-01-30 02:58:08', '2025-01-30 02:58:08'),
-(44, 'fa-solid fa-calendar', 'Leave Type', 'leavetype_management', 16, 4, '1', '2025-01-30 02:58:08', '2025-01-30 02:58:08'),
-(45, 'fa-solid fa-calendar', 'Leave', 'leave_management', 16, 5, '1', '2025-01-30 02:58:08', '2025-01-30 02:58:08'),
-(46, 'fa-solid fa-users', 'Buyers', 'buyers_management', 15, 2, '1', '2025-01-30 02:58:08', '2025-01-30 02:58:08'),
-(47, 'fa-solid fa-people-group', 'Teams', 'teams_management', 15, 3, '1', '2025-01-30 02:58:08', '2025-01-30 02:58:08'),
-(48, 'fa-solid fa-cube', 'Block Management', 'block_management', 18, 2, '1', '2025-01-30 02:58:08', '2025-01-30 02:58:08'),
-(49, 'fas fa-folder', 'Project Folder', 'project_folder', 18, 3, '0', '2025-01-30 02:58:08', '2025-01-30 02:58:08');
+(52, 'fa-solid fa-list-check', 'Create Task', 'createtask_management', 17, 1, '1', '2025-02-08 01:54:17', '2025-02-08 01:54:17');
 
 -- --------------------------------------------------------
 
@@ -166,6 +157,49 @@ INSERT INTO `roles` (`role_id`, `role_name`, `role_description`, `is_active`, `c
 (1, 'Super Admin', 'Has full access to all system functionalities', 1, '2025-01-18 08:58:24', '2025-01-18 09:24:33'),
 (2, 'Admin', 'Has administrative access with some restrictions', 1, '2025-01-18 08:58:24', '2025-01-18 08:58:24'),
 (3, 'User', 'Regular user with basic access rights', 1, '2025-01-18 08:58:24', '2025-01-18 08:58:24');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `tasks`
+--
+
+CREATE TABLE `tasks` (
+  `task_id` int(11) NOT NULL,
+  `task_name` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `task_date` date NOT NULL,
+  `start_time` time NOT NULL,
+  `end_time` time NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `tasks`
+--
+
+INSERT INTO `tasks` (`task_id`, `task_name`, `description`, `task_date`, `start_time`, `end_time`, `created_at`) VALUES
+(1, 'Birthday Ko', 'test', '2025-02-08', '10:14:00', '23:15:00', '2025-02-08 02:14:59');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `task_assignments`
+--
+
+CREATE TABLE `task_assignments` (
+  `assignment_id` int(11) NOT NULL,
+  `task_id` int(11) DEFAULT NULL,
+  `user_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `task_assignments`
+--
+
+INSERT INTO `task_assignments` (`assignment_id`, `task_id`, `user_id`) VALUES
+(1, 1, 1),
+(2, 1, 4);
 
 -- --------------------------------------------------------
 
@@ -261,6 +295,18 @@ ALTER TABLE `roles`
   ADD PRIMARY KEY (`role_id`);
 
 --
+-- Indexes for table `tasks`
+--
+ALTER TABLE `tasks`
+  ADD PRIMARY KEY (`task_id`);
+
+--
+-- Indexes for table `task_assignments`
+--
+ALTER TABLE `task_assignments`
+  ADD PRIMARY KEY (`assignment_id`);
+
+--
 -- Indexes for table `users`
 --
 ALTER TABLE `users`
@@ -283,7 +329,7 @@ ALTER TABLE `user_roles`
 -- AUTO_INCREMENT for table `modules`
 --
 ALTER TABLE `modules`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `module_permissions`
@@ -295,7 +341,7 @@ ALTER TABLE `module_permissions`
 -- AUTO_INCREMENT for table `pages`
 --
 ALTER TABLE `pages`
-  MODIFY `page_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
+  MODIFY `page_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=53;
 
 --
 -- AUTO_INCREMENT for table `page_permissions`
@@ -308,6 +354,18 @@ ALTER TABLE `page_permissions`
 --
 ALTER TABLE `roles`
   MODIFY `role_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `tasks`
+--
+ALTER TABLE `tasks`
+  MODIFY `task_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `task_assignments`
+--
+ALTER TABLE `task_assignments`
+  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `users`
