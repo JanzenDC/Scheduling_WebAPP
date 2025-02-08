@@ -12,6 +12,9 @@
 <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <link href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css" rel="stylesheet">
 
+<!-- Select2 CSS -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-beta.1/css/select2.min.css" rel="stylesheet">
+
 <!-- Utility Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
@@ -55,7 +58,23 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/shepherd.js/8.0.1/css/shepherd.css" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/shepherd.js/8.0.1/js/shepherd.min.js"></script>
 
+<!-- Select2 JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-beta.1/js/select2.min.js"></script>
+
 <style>
+        .select2-result-user {
+        padding: 4px;
+    }
+    .select2-result-user .user-name {
+        color: #000;
+    }
+    .select2-result-user .user-position {
+        font-size: 0.875rem;
+        color: #666;
+    }
+    .select2-container {
+        z-index: 99999;
+    }
     body {
         display: grid;
         grid-template-areas:
