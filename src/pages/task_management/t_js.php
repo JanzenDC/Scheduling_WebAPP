@@ -240,7 +240,7 @@ function viewTask(targetID) {
     const title = "View Task Details";
     $("#dialog_emp").remove();
     $('body').append("<div id='dialog_emp'></div>");
-    SYS_dialog2('#dialog_emp', '400', '800', title, function() {});
+    SYS_dialog2('#dialog_emp', '650', '500', title, function() {});
 
     const str = `
         <div class="p-4">

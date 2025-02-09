@@ -4,7 +4,7 @@ header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: POST, GET, PUT, DELETE');
 header('Access-Control-Allow-Headers: Content-Type');
 header('Content-Type: application/json');
-
+session_start();
 require '../config.php'; 
 require_once('../vendor/tecnickcom/tcpdf/tcpdf.php');
 
@@ -17,6 +17,47 @@ $response = [
 $action = $_GET['action'] ?? '';
 
 switch ($action) {
+    case 'fetch_all_target':
+        $user_id = $_SESSION['user']['id'];
+    
+        $sql = "
+            SELECT t.task_id, t.task_name, t.task_date, t.start_time, t.end_time, t.created_at,
+                   GROUP_CONCAT(CONCAT(u.fname, ' ', u.lname)) AS assigned_users
+            FROM tasks t
+            LEFT JOIN task_assignments ta ON t.task_id = ta.task_id
+            LEFT JOIN users u ON ta.user_id = u.user_id
+            WHERE ta.user_id = ?
+            GROUP BY t.task_id
+            ORDER BY t.task_date DESC
+        ";
+    
+        $stmt = mysqli_prepare($conn, $sql);
+        mysqli_stmt_bind_param($stmt, "i", $user_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+    
+        if ($result && mysqli_num_rows($result) > 0) {
+            $tasks = [];
+    
+            while ($row = mysqli_fetch_assoc($result)) {
+                $tasks[] = [
+                    'task_id' => $row['task_id'],
+                    'task_name' => $row['task_name'],
+                    'task_date' => $row['task_date'],
+                    'start_time' => date('h:i A', strtotime($row['start_time'])),
+                    'end_time' => date('h:i A', strtotime($row['end_time'])),
+                    'created_at' => $row['created_at'],
+                    'assigned_users' => $row['assigned_users'] ? explode(',', $row['assigned_users']) : [],
+                ];
+            }
+    
+            $response['success'] = true;
+            $response['data'] = $tasks;
+        } else {
+            $response['success'] = false;
+            $response['message'] = 'No tasks found.';
+        }
+        break;
     
     case 'fetch_all':
 
@@ -150,7 +191,48 @@ switch ($action) {
             $response['data'] = [];
         }
         break;
+    case 'fetch_calendar_events_single':
+        $user_id = $_SESSION['user']['id'];
     
+        $sql = "
+            SELECT t.*, 
+                    (SELECT GROUP_CONCAT(user_id) FROM task_assignments WHERE task_id = t.task_id) AS selected_users
+            FROM tasks t
+            INNER JOIN task_assignments ta ON t.task_id = ta.task_id
+            WHERE ta.user_id = ?
+            ORDER BY t.task_date DESC
+        ";
+    
+        $stmt = mysqli_prepare($conn, $sql);
+        mysqli_stmt_bind_param($stmt, "i", $user_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+    
+        $tasks = [];
+        while ($task = mysqli_fetch_assoc($result)) {
+            $tasks[] = [
+                'task' => [
+                    'task_id' => $task['task_id'],
+                    'task_name' => $task['task_name'],
+                    'description' => $task['description'],
+                    'task_date' => $task['task_date'],
+                    'start_time' => $task['start_time'],
+                    'end_time' => $task['end_time'],
+                    'created_at' => $task['created_at']
+                ],
+                'selected_users' => $task['selected_users'] ? explode(',', $task['selected_users']) : []
+            ];
+        }
+    
+        if (!empty($tasks)) {
+            $response['success'] = true;
+            $response['data'] = $tasks;
+        } else {
+            $response['success'] = false;
+            $response['message'] = 'No tasks found.';
+        }
+        break;
+        
     case 'fetch_task_details':
         $task_id = $_GET['task_id'] ?? 0;
         
@@ -423,71 +505,27 @@ switch ($action) {
     case 'update_task_datetime':
         $task_id = $_POST['task_id'] ?? 0;
         $task_date = $_POST['task_date'] ?? '';
-        $start_time = $_POST['start_time'] ?? '';
-        $end_time = $_POST['end_time'] ?? '';
-        
-        // Validate the times
-        if (strtotime($start_time) >= strtotime($end_time)) {
-            $response['success'] = false;
-            $response['message'] = 'End time must be after start time.';
-            break;
-        }
-        
-        // Check for conflicts
-        $sql = "SELECT COUNT(*) as conflict_count 
-                FROM tasks 
-                WHERE task_id != ? 
-                AND task_date = ?
-                AND (
-                    (start_time <= ? AND end_time > ?) OR
-                    (start_time < ? AND end_time >= ?) OR
-                    (start_time >= ? AND end_time <= ?)
-                )";
-                
-        $stmt = mysqli_prepare($conn, $sql);
-        mysqli_stmt_bind_param($stmt, "isssssss", 
-            $task_id, 
-            $task_date, 
-            $end_time, 
-            $start_time,
-            $end_time,
-            $start_time,
-            $start_time,
-            $end_time
-        );
-        mysqli_stmt_execute($stmt);
-        $conflict_result = mysqli_stmt_get_result($stmt);
-        $conflict_count = mysqli_fetch_assoc($conflict_result)['conflict_count'];
-        
-        if ($conflict_count > 0) {
-            $response['success'] = false;
-            $response['message'] = 'Time slot conflicts with existing tasks.';
-            break;
-        }
-        
-        // Update the task
+    
+        // Update only the task date
         $update_sql = "UPDATE tasks 
-                        SET task_date = ?, 
-                            start_time = ?, 
-                            end_time = ?
+                        SET task_date = ? 
                         WHERE task_id = ?";
                         
         $stmt = mysqli_prepare($conn, $update_sql);
-        mysqli_stmt_bind_param($stmt, "sssi", 
+        mysqli_stmt_bind_param($stmt, "si", 
             $task_date, 
-            $start_time, 
-            $end_time, 
             $task_id
         );
-        
+    
         if (mysqli_stmt_execute($stmt)) {
             $response['success'] = true;
-            $response['message'] = 'Task updated successfully.';
+            $response['message'] = 'Task date updated successfully.';
         } else {
             $response['success'] = false;
-            $response['message'] = 'Failed to update task.';
+            $response['message'] = 'Failed to update task date.';
         }
         break;
+        
     default:
         $response['message'] = 'Invalid action.';
         break;

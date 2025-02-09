@@ -122,8 +122,6 @@ $(document).ready(function() {
         }
     });
 
-    $('#checkConflicts').click(checkConflicts);
-    $('#createTask').click(createTask);
 });
 
 // Function to update task date/time when dragged or resized
@@ -133,9 +131,7 @@ function updateTaskDate(taskId, newStart, newEnd, revertFunc) {
         type: 'POST',
         data: {
             task_id: taskId,
-            task_date: newStart.format('YYYY-MM-DD'),
-            start_time: newStart.format('HH:mm:ss'),
-            end_time: newEnd.format('HH:mm:ss')
+            task_date: newStart.format('YYYY-MM-DD')
         },
         success: function(response) {
             if (!response.success) {
@@ -145,7 +141,7 @@ function updateTaskDate(taskId, newStart, newEnd, revertFunc) {
         },
         error: function() {
             revertFunc();
-            showAlert('error', 'Error', 'Failed to update task date/time.');
+            showAlert('error', 'Error', 'Failed to update task date.');
         }
     });
 }
