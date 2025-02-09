@@ -61,37 +61,38 @@
 <!-- Select2 JS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-beta.1/js/select2.min.js"></script>
 
+
 <style>
-    @keyframes blink {
-        0% { opacity: 0; }
-        50% { opacity: 1; }
-        100% { opacity: 0; }
-    }
-    .priority-label {
-    margin-left: 5px;
-    }
-
-    .availability-label {
-        margin-left: 5px;
-    }
-    .blinking-star {
-        color: gold; /* Change the color to your preference */
-        animation: blink 1s infinite;
+    /* Style the dropdown container */
+    .select2-container--default .select2-selection--single {
+        height: 40px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 5px 10px;
     }
 
-    .select2-result-user {
-        padding: 4px;
+    /* Style selected option */
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        font-size: 14px;
+        font-weight: bold;
+        color: #333;
     }
-    .select2-result-user .user-name {
-        color: #000;
+
+    /* Style dropdown options */
+    .select2-results__option {
+        font-size: 14px;
+        padding: 10px;
     }
-    .select2-result-user .user-position {
-        font-size: 0.875rem;
+
+    /* Highlight user role with a different color */
+    .select2-results__option .user-role {
         color: #666;
+        font-size: 12px;
+        font-style: italic;
+        display: block;
+        margin-top: 2px;
     }
-    .select2-container {
-        z-index: 99999;
-    }
+
     body {
         display: grid;
         grid-template-areas:

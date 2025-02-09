@@ -250,6 +250,7 @@ function fluidDialog() {
 }
 
 $(document).ready(function() {
+    
     function setCont(tabIndex) {
         // Hide all content divs
         $("[id^=setCont]").hide();
