@@ -165,31 +165,82 @@
         font-size: 14px;
         cursor: pointer;
     }
-  .dataTables_filter label input[type="search"]{
-   height:30px;
-   width:250px;
-   border-radius: 10px;
-   background:#f5f5f550;
-   padding: 0 10px 2px 10px;
-  }
+/* Modern DataTable Container */
+.dataTables_wrapper {
+    @apply p-6 bg-white rounded-xl shadow-lg;
+    margin: 2rem 0;
+}
 
+/* Search Input Styling */
+.dataTables_filter label input[type="search"] {
+    @apply w-64 h-10 px-4 py-2 rounded-lg border-2 border-gray-200 
+    focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 
+    transition-colors duration-200 outline-none bg-gray-50;
+}
 
-  .dataTables_length label select{
-    height:30px;
-    margin-bottom:10px;
+/* Length Select Styling */
+.dataTables_length label select {
+    @apply h-10 px-3 py-2 mx-2 rounded-lg border-2 border-gray-200 
+    focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 
+    transition-colors duration-200 outline-none bg-gray-50;
+}
+
+/* Table Header */
+.dataTable thead th {
+    @apply px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold 
+    text-left border-b-0;
+}
+
+/* Table Body */
+.dataTable tbody td {
+    @apply px-6 py-4 border-b border-gray-100 text-gray-700;
+}
+
+/* Striped Rows */
+.dataTable tbody tr:nth-child(even) {
+    @apply bg-gray-50;
+}
+
+/* Hover Effect */
+.dataTable tbody tr:hover {
+    @apply bg-blue-50 transition-colors duration-150;
+}
+
+/* Pagination Buttons */
+.dataTables_paginate .paginate_button {
+    @apply px-4 py-2 mx-1 rounded-lg border border-gray-200 text-gray-700 
+    hover:bg-blue-500 hover:text-white hover:border-blue-500 
+    transition-colors duration-200;
+}
+
+.dataTables_paginate .paginate_button.current {
+    @apply bg-blue-500 text-white border-blue-500;
+}
+
+/* Info Text */
+.dataTables_info {
+    @apply text-gray-600 mt-4;
+}
+
+/* Processing Display */
+.dataTables_processing {
+    @apply bg-white bg-opacity-90 px-4 py-2 rounded-lg shadow-md;
+}
+
+/* Responsive Table */
+@media (max-width: 768px) {
+    .dataTables_wrapper {
+        @apply px-4;
+    }
     
-  }
-  .dataTables_wrapper{
-    padding: 20px;
-    background:#fff;
-    border-radius:10px;
-    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.2);
-
-  }
-  .dataTables_wrapper tbody{
-    background:white
+    .dataTables_filter label input[type="search"] {
+        @apply w-full max-w-xs;
+    }
     
-  }
+    .dataTables_length label select {
+        @apply w-24;
+    }
+}
  
 /* //ANCHOR - Adjust the display */
 
