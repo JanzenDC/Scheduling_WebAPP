@@ -1,5 +1,5 @@
 <!-- Favicon -->
-<link rel="icon" href="/nexusPH/resources/images/nexusPH.ico" type="image/x-icon">
+<link rel="icon" href="/nexusPH/resources/images/company_logo.png" type="image/png">
 
 <!-- Core Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
