@@ -96,7 +96,29 @@ $(document).ready(function () {
         if (validateForm()) {
             $("#assign-task-section").slideDown();
             $(this).hide(); // Hide the button after it's clicked
+
+            // Disable and clear the fields
+            $("#task-date, #start-time, #end-time")
+                .prop("disabled", true); // Disable inputs
         }
+    });
+
+    // Reset Fields Button Logic
+    $("#reset-fields-button").click(function () {
+        // Clear all fields
+        $("#task-form input, #task-form textarea").val("");
+
+        // Re-enable disabled fields
+        $("#task-date, #start-time, #end-time").prop("disabled", false);
+
+        // Show Next button again
+        $("#next-button").show();
+
+        // Hide the assign task section again
+        $("#assign-task-section").slideUp();
+
+        // Reset user selection
+        $("#user-select").val(null).trigger("change");
     });
 });
 

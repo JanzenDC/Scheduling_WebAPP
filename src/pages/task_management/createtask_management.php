@@ -67,10 +67,18 @@ include_once 'task_management/ct_js.php';
           </select>
         </div>
 
-        <button id="save-task-button" 
-          class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 px-6 rounded-lg font-semibold text-lg shadow-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none">
-          Save Task
+        <!-- Reset Fields Button -->
+        <button id="reset-fields-button" 
+            class="w-full bg-gray-500 text-white py-3 px-6 rounded-lg font-semibold text-lg shadow-lg hover:bg-gray-600 transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed">
+            Reset Fields
         </button>
+
+        <!-- Save Task Button -->
+        <button id="save-task-button" 
+            class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 px-6 rounded-lg font-semibold text-lg shadow-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none">
+            Save Task
+        </button>
+
       </div>
     </div>
   </div>
