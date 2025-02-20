@@ -267,24 +267,42 @@ switch ($action) {
         break;
         
     case 'update':
-        $task_id = $_POST['task_id'] ?? 0;
-        $task_name = $_POST['task_name'] ?? '';
-        $task_date = $_POST['task_date'] ?? '';
-        $start_time = $_POST['start_time'] ?? '';
-        $end_time = $_POST['end_time'] ?? '';
+        $task_id        = $_POST['task_id'] ?? 0;
+        $task_name      = $_POST['task_name'] ?? '';
+        $task_date      = $_POST['task_date'] ?? '';
+        $start_time     = $_POST['start_time'] ?? '';
+        $end_time       = $_POST['end_time'] ?? '';
         $assigned_users = $_POST['assigned_users'] ?? [];
-        
+    
+        // Check for scheduling conflicts before updating.
+        $conflicts = checkConflicts($task_date, $start_time, $end_time, $assigned_users);
+        if (!empty($conflicts)) {
+            // Build a detailed message about the conflicts.
+            $conflictMessages = [];
+            foreach ($conflicts as $conflict) {
+                $conflictMessages[] = "{$conflict['user_name']} has a conflict with task '{$conflict['task_name']}' scheduled from {$conflict['start_time']} to {$conflict['end_time']}.";
+            }
+            $detailedConflictMsg = implode(" ", $conflictMessages);
+    
+            // Return conflict details and suggestions without making any database changes.
+            $response['success']   = false;
+            $response['message']   = "Task scheduling conflicts detected: " . $detailedConflictMsg . " Please review the conflicts and suggested replacements.";
+            $response['data']      = $conflicts;
+            echo json_encode($response);
+            exit;
+        }
+    
+        // No conflicts found, so proceed with the update.
         mysqli_begin_transaction($conn);
         
         try {
-            // Update task details
+            // Update task details.
             $update_sql = "UPDATE tasks SET 
-                task_name = ?,
-                task_date = ?,
-                start_time = ?,
-                end_time = ?
-                WHERE task_id = ?";
-                
+                            task_name = ?,
+                            task_date = ?,
+                            start_time = ?,
+                            end_time = ?
+                            WHERE task_id = ?";
             $stmt = mysqli_prepare($conn, $update_sql);
             mysqli_stmt_bind_param($stmt, "ssssi", 
                 $task_name, 
@@ -295,17 +313,16 @@ switch ($action) {
             );
             mysqli_stmt_execute($stmt);
             
-            // Delete existing assignments
+            // Delete existing assignments.
             $delete_sql = "DELETE FROM task_assignments WHERE task_id = ?";
             $stmt = mysqli_prepare($conn, $delete_sql);
             mysqli_stmt_bind_param($stmt, "i", $task_id);
             mysqli_stmt_execute($stmt);
             
-            // Insert new assignments
+            // Insert new assignments.
             if (!empty($assigned_users)) {
                 $insert_sql = "INSERT INTO task_assignments (task_id, user_id) VALUES (?, ?)";
                 $stmt = mysqli_prepare($conn, $insert_sql);
-                
                 foreach ($assigned_users as $user_id) {
                     mysqli_stmt_bind_param($stmt, "ii", $task_id, $user_id);
                     mysqli_stmt_execute($stmt);
@@ -318,13 +335,19 @@ switch ($action) {
             
         } catch (Exception $e) {
             mysqli_rollback($conn);
+            $response['success'] = false;
             $response['message'] = 'Error updating task: ' . $e->getMessage();
         }
         break;
+        
     case 'view_pdf':
         case 'download_pdf':
-            $task_id = $_GET['task_id'] ?? 0;
-            
+            $task_id = isset($_GET['task_id']) ? intval($_GET['task_id']) : 0;
+        
+            if ($task_id <= 0) {
+                die('Invalid Task ID');
+            }
+        
             // Fetch task details
             $sql = "SELECT 
                         t.*, 
@@ -340,7 +363,7 @@ switch ($action) {
                     LEFT JOIN roles r ON ur.role_id = r.role_id
                     WHERE t.task_id = ?
                     GROUP BY t.task_id";
-            
+        
             $stmt = mysqli_prepare($conn, $sql);
             mysqli_stmt_bind_param($stmt, "i", $task_id);
             mysqli_stmt_execute($stmt);
@@ -350,102 +373,72 @@ switch ($action) {
             if (!$task) {
                 die('Task not found');
             }
-
+        
             class MYPDF extends TCPDF {
                 public function Header() {
                     $this->SetFont('helvetica', 'B', 16);
-                    
+        
                     $image_file_left = '../resources/images/1738888990405-removebg-preview-removebg-preview.png';
-                    $this->Image($image_file_left, 10, 10, 18);  // Adjusted width to 30mm
-            
+                    $this->Image($image_file_left, 10, 10, 20);
+        
                     $image_file_right = '../resources/images/cropped-logo_favicon.png';
-                    $this->Image($image_file_right, 35, 10, 18);  // Adjusted width to 30mm
-                    
-                    $this->Cell(0, 15, 'Task Details', 0, true, 'C');
+                    $this->Image($image_file_right, 180, 10, 20);
+        
+                    $this->Cell(0, 15, 'Task Details Report', 0, true, 'C');
                     $this->Ln(10);
                 }
-            
+        
                 public function Footer() {
                     $this->SetY(-15);
                     $this->SetFont('helvetica', 'I', 8);
-                    $this->Cell(0, 10, 'Page ' . $this->getAliasNumPage() . '/' . $this->getAliasNbPages(), 0, false, 'C');
+                    $this->Cell(0, 10, 'Page ' . $this->getAliasNumPage() . ' of ' . $this->getAliasNbPages(), 0, false, 'C');
                 }
             }
-            
-            
-            
-            
         
             $pdf = new MYPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
         
-            // Set document information
+            // Document Properties
             $pdf->SetCreator(PDF_CREATOR);
-            $pdf->SetAuthor('Your Company Name');
-            $pdf->SetTitle('Task Details - ' . $task['task_name']);
+            $pdf->SetAuthor('Company Name');
+            $pdf->SetTitle('Task Details - ' . htmlspecialchars($task['task_name']));
         
-            // Set default header data
-            $pdf->SetHeaderData(PDF_HEADER_LOGO, PDF_HEADER_LOGO_WIDTH, PDF_HEADER_TITLE, PDF_HEADER_STRING);
-        
-            // Set margins
-            $pdf->SetMargins(PDF_MARGIN_LEFT, PDF_MARGIN_TOP, PDF_MARGIN_RIGHT);
-            $pdf->SetHeaderMargin(PDF_MARGIN_HEADER);
-            $pdf->SetFooterMargin(PDF_MARGIN_FOOTER);
-        
-            // Set auto page breaks
-            $pdf->SetAutoPageBreak(TRUE, PDF_MARGIN_BOTTOM);
-        
-            // Add a page
+            // Margins & Page Settings
+            $pdf->SetMargins(15, 30, 15);
+            $pdf->SetHeaderMargin(10);
+            $pdf->SetFooterMargin(10);
+            $pdf->SetAutoPageBreak(TRUE, 20);
             $pdf->AddPage();
-        
-            // Set font
             $pdf->SetFont('helvetica', '', 12);
         
-            // Content
+            // Content Styling
             $pdf->SetFont('helvetica', 'B', 14);
-            $pdf->Cell(0, 10, 'Task Information', 0, 1);
+            $pdf->Cell(0, 10, 'Task Information', 0, 1, 'C');
             $pdf->SetFont('helvetica', '', 12);
             $pdf->Ln(5);
         
-            // Task Details Table
-            $pdf->SetFillColor(240, 240, 240);
+            // Table Styling
+            $pdf->SetFillColor(230, 230, 230);
             $pdf->SetFont('helvetica', 'B', 12);
-            
-            // Task Name
-            $pdf->Cell(40, 10, 'Task Name:', 0, 0, 'L', true);
-            $pdf->SetFont('helvetica', '', 12);
-            $pdf->Cell(0, 10, $task['task_name'], 0, 1, 'L', true);
-
-                        
-            // Date
-            $pdf->SetFont('helvetica', 'B', 12);
-            $pdf->Cell(40, 10, 'Date:', 0, 0, 'L');
-            $pdf->SetFont('helvetica', '', 12);
-            $pdf->Cell(0, 10, date('F d, Y', strtotime($task['task_date'])), 0, 1, 'L');
-            
-            // Time
-            $pdf->SetFont('helvetica', 'B', 12);
-            $pdf->Cell(40, 10, 'Time:', 0, 0, 'L', true);
-            $pdf->SetFont('helvetica', '', 12);
-            $pdf->Cell(0, 10, 
-                date('h:i A', strtotime($task['start_time'])) . ' - ' . 
-                date('h:i A', strtotime($task['end_time'])), 
-                0, 1, 'L', true
-            );
         
-            // Created Date
-            $pdf->SetFont('helvetica', 'B', 12);
-            $pdf->Cell(40, 10, 'Created:', 0, 0, 'L');
-            $pdf->SetFont('helvetica', '', 12);
-            $pdf->Cell(0, 10, date('F d, Y h:i A', strtotime($task['created_at'])), 0, 1, 'L');
+            $taskDetails = [
+                'Task Name'        => $task['task_name'],
+                'Date'             => date('F d, Y', strtotime($task['task_date'])),
+                'Time'             => date('h:i A', strtotime($task['start_time'])) . ' - ' . date('h:i A', strtotime($task['end_time'])),
+                'Created'          => date('F d, Y h:i A', strtotime($task['created_at'])),
+                'Task Description' => $task['description']
+            ];
         
-            // Task Name
-            $pdf->Cell(40, 10, 'Task Description:', 0, 0, 'L', true);
-            $pdf->SetFont('helvetica', '', 12);
-            $pdf->Cell(0, 10, $task['description'], 0, 1, 'L', true);
-            // Assigned Users
+            foreach ($taskDetails as $label => $value) {
+                $pdf->SetFont('helvetica', 'B', 12);
+                $pdf->Cell(50, 10, $label . ':', 1, 0, 'L', true);
+                $pdf->SetFont('helvetica', '', 12);
+                $pdf->Cell(0, 10, htmlspecialchars($value), 1, 1, 'L');
+            }
+        
+            // Assigned Users Section
             $pdf->Ln(10);
             $pdf->SetFont('helvetica', 'B', 14);
-            $pdf->Cell(0, 10, 'Assigned Users', 0, 1);
+            $pdf->Cell(0, 10, 'Assigned Users', 0, 1, 'C');
             $pdf->SetFont('helvetica', '', 12);
             $pdf->Ln(5);
         
@@ -453,18 +446,20 @@ switch ($action) {
             foreach ($assigned_users as $user) {
                 if (!empty($user)) {
                     $pdf->Cell(10, 10, '•', 0, 0);
-                    $pdf->MultiCell(0, 10, $user, 0, 'L');
+                    $pdf->MultiCell(0, 10, htmlspecialchars($user), 0, 'L');
                 }
             }
         
             // Output PDF
+            $filename = 'Task_Details_' . $task_id . '.pdf';
             if ($_GET['action'] === 'download_pdf') {
-                $pdf->Output('Task_Details_' . $task_id . '.pdf', 'D');
+                $pdf->Output($filename, 'D');
             } else {
-                $pdf->Output('Task_Details_' . $task_id . '.pdf', 'I');
+                $pdf->Output($filename, 'I');
             }
             exit;
-            break;
+        
+        break;
     case 'fetch_calendar_events':
         $start_date = $_GET['start'] ?? date('Y-m-d');
         $end_date = $_GET['end'] ?? date('Y-m-d');
@@ -533,4 +528,68 @@ switch ($action) {
 
 echo json_encode($response);
 mysqli_close($conn);
+
+/**
+ * Checks for scheduling conflicts for a given task time range and list of users.
+ *
+ * This function now also retrieves the user's role by joining with the `user_roles` and `roles` tables.
+ * If a conflict is detected and the user's role is "Permanent", the system suggests available replacement personnel.
+ *
+ * @param string $task_date  The date on which the task is scheduled.
+ * @param string $start_time The starting time of the task.
+ * @param string $end_time   The ending time of the task.
+ * @param array  $user_ids   Array of user IDs to check.
+ *
+ * @return array An array containing conflict details and any replacement suggestions.
+ */
+function checkConflicts($task_date, $start_time, $end_time, $user_ids) {
+    global $conn;
+
+    $conflicts = [];
+
+    foreach ($user_ids as $user_id) {
+        $user_id = mysqli_real_escape_string($conn, $user_id);
+        // Updated query to join with user_roles and roles to obtain the user's role.
+        $query = "SELECT t.task_name, t.start_time, t.end_time,
+                  CONCAT(u.fname, ' ', COALESCE(u.mname, ''), ' ', u.lname) as user_name,
+                  r.role_name as role
+                  FROM tasks t 
+                  JOIN task_assignments ta ON t.task_id = ta.task_id 
+                  JOIN users u ON ta.user_id = u.user_id
+                  JOIN user_roles ur ON u.user_id = ur.user_id
+                  JOIN roles r ON ur.role_id = r.role_id
+                  WHERE ta.user_id = $user_id 
+                  AND t.task_date = '$task_date' 
+                  AND (t.start_time < '$end_time' AND t.end_time > '$start_time')";
+
+        $result = mysqli_query($conn, $query);
+        
+        if ($result && mysqli_num_rows($result) > 0) {
+            while ($row = mysqli_fetch_assoc($result)) {
+                // Convert times to 12-hour format.
+                $start_time_12hr = date("g:i A", strtotime($row['start_time']));
+                $end_time_12hr   = date("g:i A", strtotime($row['end_time']));
+
+                // Initialize replacement suggestions.
+                $suggestions = [];
+
+                // For users with a "Permanent" role, try to suggest available replacements.
+                if (strtolower($row['role']) === 'permanent') {
+                    $suggestions = suggestReplacement($task_date, $start_time, $end_time, $user_id);
+                }
+
+                $conflicts[] = [
+                    'user_name'   => trim($row['user_name']),
+                    'task_name'   => $row['task_name'],
+                    'start_time'  => $start_time_12hr,
+                    'end_time'    => $end_time_12hr,
+                    'role'        => $row['role'],
+                    'suggestions' => $suggestions  // Replacement suggestions if available.
+                ];
+            }
+        }
+    }
+
+    return $conflicts;
+}
 ?>
