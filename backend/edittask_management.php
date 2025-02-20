@@ -399,7 +399,7 @@ switch ($action) {
         
             // Document Properties
             $pdf->SetCreator(PDF_CREATOR);
-            $pdf->SetAuthor('Company Name');
+            $pdf->SetAuthor('Scheduling System');
             $pdf->SetTitle('Task Details - ' . htmlspecialchars($task['task_name']));
         
             // Margins & Page Settings
