@@ -520,7 +520,43 @@ switch ($action) {
             $response['message'] = 'Failed to update task date.';
         }
         break;
-        
+    case 'delete':
+        $task_id = $_POST['targetID'] ?? 0;
+
+        if ($task_id > 0) {
+            // Begin transaction
+            mysqli_begin_transaction($conn);
+
+            try {
+                // Delete task assignments
+                $delete_assignments_sql = "DELETE FROM task_assignments WHERE task_id = ?";
+                $stmt = mysqli_prepare($conn, $delete_assignments_sql);
+                mysqli_stmt_bind_param($stmt, "i", $task_id);
+                mysqli_stmt_execute($stmt);
+
+                // Delete the task
+                $delete_task_sql = "DELETE FROM tasks WHERE task_id = ?";
+                $stmt = mysqli_prepare($conn, $delete_task_sql);
+                mysqli_stmt_bind_param($stmt, "i", $task_id);
+                mysqli_stmt_execute($stmt);
+
+                // Commit transaction
+                mysqli_commit($conn);
+
+                $response['success'] = true;
+                $response['message'] = 'Task deleted successfully.';
+            } catch (Exception $e) {
+                // Rollback transaction
+                mysqli_rollback($conn);
+
+                $response['success'] = false;
+                $response['message'] = 'Failed to delete task: ' . $e->getMessage();
+            }
+        } else {
+            $response['success'] = false;
+            $response['message'] = 'Invalid task ID.';
+        }
+        break;
     default:
         $response['message'] = 'Invalid action.';
         break;

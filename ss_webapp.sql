@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 08, 2025 at 10:41 AM
+-- Generation Time: Feb 25, 2025 at 04:03 PM
 -- Server version: 10.4.11-MariaDB
 -- PHP Version: 7.4.4
 
@@ -179,13 +179,6 @@ CREATE TABLE `tasks` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
---
--- Dumping data for table `tasks`
---
-
-INSERT INTO `tasks` (`task_id`, `task_name`, `description`, `task_date`, `start_time`, `end_time`, `created_at`) VALUES
-(1, 'Birthday Ko', 'test', '2025-02-08', '10:14:00', '23:15:00', '2025-02-09 02:14:59');
-
 -- --------------------------------------------------------
 
 --
@@ -197,14 +190,6 @@ CREATE TABLE `task_assignments` (
   `task_id` int(11) DEFAULT NULL,
   `user_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
---
--- Dumping data for table `task_assignments`
---
-
-INSERT INTO `task_assignments` (`assignment_id`, `task_id`, `user_id`) VALUES
-(8, 1, 1),
-(9, 1, 4);
 
 -- --------------------------------------------------------
 
@@ -365,13 +350,13 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `tasks`
 --
 ALTER TABLE `tasks`
-  MODIFY `task_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `task_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `task_assignments`
 --
 ALTER TABLE `task_assignments`
-  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `users`
