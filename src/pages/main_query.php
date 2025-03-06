@@ -7,7 +7,7 @@ if ($_SERVER['SERVER_NAME'] == 'localhost' || $_SERVER['SERVER_NAME'] == '127.0.
     $baseUrl = 'http://localhost/Scheduling_WebAPP/';
 } else {
     // Set the base URL to production if not on localhost
-    $baseUrl = 'https://wealthinvestproperties.com/';
+    $baseUrl = 'https://yourhosting.com/';
 }
 
 

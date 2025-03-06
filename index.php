@@ -3,7 +3,7 @@ session_start();
 if ($_SERVER['SERVER_NAME'] == 'localhost' || $_SERVER['SERVER_NAME'] == '127.0.0.1') {
     $baseUrl = 'http://localhost/Scheduling_WebAPP/';
 } else {
-    $baseUrl = 'https://wealthinvestproperties.com/';
+    $baseUrl = 'https://yourhosting.com/';
 }
 
 if (isset($_SESSION['user']['id'])) {
@@ -24,7 +24,7 @@ if (isset($_SESSION['user']['id'])) {
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
             baseUrl = 'http://localhost/Scheduling_WebAPP/';
         } else {
-            baseUrl = 'https://wealthinvestproperties.com/';
+            baseUrl = 'https://yourhosting.com/';
         }
 
         // Toggle Show/Hide Password with Eye Icon
@@ -145,6 +145,11 @@ if (isset($_SESSION['user']['id'])) {
             <i id="toggleIcon" class="fa fa-eye -mt-4"></i>
           </button>
         </div>
+        <div class="text-end">
+          <a href="src/forgot_password.php" class="text-[#044389] hover:text-indigo-800 font-bold">
+            Forgot Password?
+          </a>
+        </div>
       </div>
       
       <!-- Submit Button -->
@@ -157,7 +162,9 @@ if (isset($_SESSION['user']['id'])) {
         </button>
       </div>
     </form>
-    
+    <!-- Forgot Password Link -->
+
+
     <!-- Registration Link -->
     <div class="text-center mt-6">
       <p class="text-gray-700 text-sm">
