@@ -34,22 +34,24 @@ $(document).ready(function () {
         let isValid = true;
         let data = {};
 
+        // Validate form fields
         $("#task-form input, #task-form textarea").each(function () {
             let fieldId = $(this).attr("id");
             let fieldValue = $(this).val().trim();
 
             if (fieldValue === "") {
                 isValid = false;
-                return false; // Break loop if empty field is found
+                return false; 
             }
 
             data[fieldId] = $("#" + fieldId).val();
         });
 
         if (!isValid) {
-            return false; // Stop execution if the form is not valid
+            return false; // Stop execution if any form field is empty
         }
 
+        // AJAX call to fetch users
         $.ajax({
             url: BASE_URL + 'backend/edittask_managementv2.php?action=fetch_users',
             type: 'POST',
@@ -58,18 +60,33 @@ $(document).ready(function () {
             success: function(response) {
                 if (response.success) {
                     $("#user-select").empty();
+
+                    // Filter out roles named: "admin", "superadmin", or "super admin" (in any case)
                     response.data.forEach(user => {
-                        let roleDisplay = user.role_name ? ` (${user.role_name})` : ''; // Show role if available
-                        $("#user-select").append(`<option value="${user.user_id}">${user.full_name}${roleDisplay}</option>`);
+                        let roleName = user.role_name ? user.role_name.toUpperCase() : '';
+
+                        // Only display user if roleName is not admin / super admin
+                        if (roleName !== 'ADMIN' && 
+                            roleName !== 'SUPERADMIN' && 
+                            roleName !== 'SUPER ADMIN') 
+                        {
+                            let roleDisplay = user.role_name ? ` (${user.role_name})` : '';
+                            $("#user-select").append(
+                                `<option value="${user.user_id}">${user.full_name}${roleDisplay}</option>`
+                            );
+                        }
                     });
 
-                    // Re-initialize Select2 to enable search after loading options
+                    // Re-initialize Select2 after appending
                     $("#user-select").prop("disabled", false).select2({
                         placeholder: "Search and select users",
                         allowClear: true
                     });
                 } else {
-                    $("#user-select").empty().append('<option value="">No available users</option>').prop("disabled", true);
+                    $("#user-select")
+                    .empty()
+                    .append('<option value="">No available users</option>')
+                    .prop("disabled", true);
                 }
             },
             error: function() {
@@ -79,6 +96,7 @@ $(document).ready(function () {
 
         return isValid;
     }
+
 
     $("#task-form input, #task-form textarea").on("input", function () {
         if (validateForm()) {

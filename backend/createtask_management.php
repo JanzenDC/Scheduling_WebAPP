@@ -16,15 +16,20 @@ $action = $_GET['action'] ?? '';
 
 switch ($action) {
     case 'fetch_users':
-        // Fetch users with their full name and task creation date.
-        // (Note: This query doesn't join roles as it's used only for display purposes.)
         $query = "
-            SELECT u.user_id, 
-                   CONCAT(u.fname, ' ', COALESCE(u.mname, ''), ' ', u.lname) as full_name,
-                   t.created_at as task_created
+            SELECT 
+                u.user_id, 
+                CONCAT(u.fname, ' ', COALESCE(u.mname, ''), ' ', u.lname) AS full_name,
+                t.created_at AS task_created
             FROM users u
             LEFT JOIN task_assignments ta ON u.user_id = ta.user_id
             LEFT JOIN tasks t ON ta.task_id = t.task_id
+            WHERE u.user_id NOT IN (
+                SELECT ur.user_id
+                FROM user_roles ur
+                JOIN roles r ON ur.role_id = r.role_id
+                WHERE UPPER(r.role_name) IN ('ADMIN','SUPER ADMIN')
+            )
             ORDER BY u.fname
         ";
     
@@ -46,12 +51,14 @@ switch ($action) {
                 }
                 
                 // Determine user availability based on whether a task was created today.
-                $current_date = date('Y-m-d');
-                $task_created_date = !empty($row['task_created']) ? date('Y-m-d', strtotime($row['task_created'])) : '';
+                $current_date      = date('Y-m-d');
+                $task_created_date = !empty($row['task_created']) 
+                                     ? date('Y-m-d', strtotime($row['task_created'])) 
+                                     : '';
     
                 $user_data['availability'] = ($task_created_date === $current_date) 
-                                               ? 'Not Available' 
-                                               : 'Available';
+                                             ? 'Not Available' 
+                                             : 'Available';
                 
                 return $user_data;
             }, $users);
@@ -59,6 +66,7 @@ switch ($action) {
             $response['message'] = 'Failed to fetch users';
         }
         break;
+    
     
     case 'check_conflicts':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
