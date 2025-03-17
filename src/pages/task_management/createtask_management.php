@@ -28,6 +28,21 @@ include_once 'task_management/ct_js.php';
             placeholder="Describe your task"></textarea>
         </div>
 
+        <!-- Priority Rating -->
+        <div class="relative">
+          <label for="priority" class="text-sm font-medium text-gray-700 block mb-2">Priority Rating</label>
+          <select id="priority" class="block w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors duration-200 outline-none">
+            <option value="1">1 - Highest</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8 - Lowest</option>
+          </select>
+        </div>
+
         <!-- Date and Time Grid -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <!-- Task Date -->

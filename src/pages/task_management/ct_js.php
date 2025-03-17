@@ -3,6 +3,7 @@ const BASE_URL = '<?php echo $baseUrl; ?>';
 $(document).ready(function () {
     $("#save-task-button").click(function () {
         let taskData = {
+            "priority": $("#priority").val(), // Changed id_priority to priority
             "task-name": $("#task-name").val(),
             "description": $("#description").val(),
             "task-date": $("#task-date").val(),
@@ -70,7 +71,7 @@ $(document).ready(function () {
                             roleName !== 'SUPERADMIN' && 
                             roleName !== 'SUPER ADMIN') 
                         {
-                            let roleDisplay = user.role_name ? ` (${user.role_name})` : '';
+                            let roleDisplay = user.role_name ?  (`(${user.role_name})`) : '';
                             $("#user-select").append(
                                 `<option value="${user.user_id}">${user.full_name}${roleDisplay}</option>`
                             );
@@ -96,7 +97,6 @@ $(document).ready(function () {
 
         return isValid;
     }
-
 
     $("#task-form input, #task-form textarea").on("input", function () {
         if (validateForm()) {
@@ -139,5 +139,4 @@ $(document).ready(function () {
         $("#user-select").val(null).trigger("change");
     });
 });
-
 </script>

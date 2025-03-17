@@ -3,8 +3,8 @@ const BASE_URL = '<?php echo $baseUrl; ?>';
 
 $(document).ready(function() {
     fetchTasks();
-
 });
+
 function fetchTasks() {
     $.ajax({
         url: BASE_URL + 'backend/edittask_management.php?action=fetch_all',
@@ -29,10 +29,7 @@ function displayTasks(data) {
     tableBody.empty();
 
     data.forEach(task => {
-        // Join the assigned users (assuming assigned_users is an array of users)
-        const assignedUsers = task.assigned_users.join(', '); // Combine the users into a string
-        
-        // Check user permissions
+        const assignedUsers = task.assigned_users.join(', ');
         const canEdit = userPermissions.can_edit;
         const canDelete = userPermissions.can_delete;
 
@@ -48,13 +45,11 @@ function displayTasks(data) {
                     <button class="action-btn bg-blue-500 text-white px-3 py-1 text-xs rounded-md hover:bg-blue-700 focus:outline-none mr-2" onclick="viewTask(${task.task_id})" data-toggle="tooltip" data-placement="top" title="View">
                         <i class="fas fa-eye"></i>
                     </button>
-                    
                     ${canEdit ? `
                     <button class="action-btn bg-yellow-500 text-white px-3 py-1 text-xs rounded-md hover:bg-yellow-700 focus:outline-none mr-2" onclick="editTask(${task.task_id})" data-toggle="tooltip" data-placement="top" title="Edit">
                         <i class="fas fa-edit"></i>
                     </button>
                     ` : ''}
-
                     ${canDelete ? `
                     <button class="action-btn bg-red-500 text-white px-3 py-1 text-xs rounded-md hover:bg-red-700 focus:outline-none mr-2" onclick="deleteTask(${task.task_id})" data-toggle="tooltip" data-placement="top" title="Delete">
                         <i class="fas fa-trash"></i>
@@ -69,13 +64,12 @@ function displayTasks(data) {
     initializeDataTable('#taskManagement');
     initializePopperTooltips(); 
 }
+
 function formatUser(user) {
     if (!user.id) return user.text;
-    
     const parts = user.text.split(' - ');
     const name = parts[0];
     const position = parts[1] || 'No Position Assigned';
-    
     return $(`
         <div class="select2-result-user">
             <div class="user-name font-medium">${name}</div>
@@ -84,7 +78,6 @@ function formatUser(user) {
     `);
 }
 
-// Custom formatting for selected items
 function formatUserSelection(user) {
     if (!user.id) return user.text;
     return user.text;
@@ -94,11 +87,10 @@ function editTask(targetID) {
     const title = "Edit Tasks";
     $("#dialog_emp").remove();
     $('body').append("<div id='dialog_emp'></div>");
-    SYS_dialog3('#dialog_emp', '400', '450', title, function() {
+    SYS_dialog3('#dialog_emp', '400', '500', title, function() {
         saveTaskEdit();
     });
 
-    // Fetch task details
     $.ajax({
         url: BASE_URL + 'backend/edittask_management.php?action=fetch_task_details',
         type: 'GET',
@@ -107,46 +99,44 @@ function editTask(targetID) {
             if (response.success) {
                 const task = response.data.task;
                 const selectedUsers = response.data.selected_users;
-
+                const priorityOptions = [1,2,3,4,5,6,7,8].map(num => 
+                    `<option value="${num}" ${task.priority_rating == num ? 'selected' : ''}>${num}</option>`
+                ).join('');
                 const str = `
                     <form id="editTaskForm" class="p-4">
                         <input type="hidden" id="task_id" value="${getSafeValue(task.task_id)}">
-                        
                         <div class="mb-4">
                             <label class="block text-sm font-medium mb-1" for="task_name">Task Name</label>
-                            <input type="text" id="task_name" class="w-full px-3 py-2 border rounded-md" 
-                                value="${getSafeValue(task.task_name)}" required>
+                            <input type="text" id="task_name" class="w-full px-3 py-2 border rounded-md" value="${getSafeValue(task.task_name)}" required>
                         </div>
-
                         <div class="mb-4">
                             <label class="block text-sm font-medium mb-1" for="task_date">Task Date</label>
-                            <input type="date" id="task_date" class="w-full px-3 py-2 border rounded-md" 
-                                value="${task.task_date}" required>
+                            <input type="date" id="task_date" class="w-full px-3 py-2 border rounded-md" value="${task.task_date}" required>
                         </div>
-
                         <div class="grid grid-cols-2 gap-4 mb-4">
                             <div>
                                 <label class="block text-sm font-medium mb-1" for="start_time">Start Time</label>
-                                <input type="time" id="start_time" class="w-full px-3 py-2 border rounded-md" 
-                                    value="${task.start_time}" required>
+                                <input type="time" id="start_time" class="w-full px-3 py-2 border rounded-md" value="${task.start_time}" required>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1" for="end_time">End Time</label>
-                                <input type="time" id="end_time" class="w-full px-3 py-2 border rounded-md" 
-                                    value="${task.end_time}" required>
+                                <input type="time" id="end_time" class="w-full px-3 py-2 border rounded-md" value="${task.end_time}" required>
                             </div>
                         </div>
-
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-1" for="priority_rating">Priority Rating</label>
+                            <select id="priority_rating" class="w-full px-3 py-2 border rounded-md" required>
+                                ${priorityOptions}
+                            </select>
+                        </div>
                         <div class="mb-4">
                             <label class="block text-sm font-medium mb-1">Assign Users</label>
                             <select id="assigned_users" class="w-full" multiple="multiple"></select>
                         </div>
                     </form>
                 `;
-
                 $("#dialog_emp").html(str).dialog("open");
 
-                // Initialize Select2
                 $('#assigned_users').select2({
                     width: '100%',
                     placeholder: 'Search and select users',
@@ -176,7 +166,6 @@ function editTask(targetID) {
                     templateSelection: formatUserSelection
                 });
 
-                // Set pre-selected users
                 if (selectedUsers.length > 0) {
                     $.ajax({
                         url: BASE_URL + 'backend/edittask_management.php?action=get_selected_users',
@@ -185,12 +174,7 @@ function editTask(targetID) {
                         success: function(response) {
                             if (response.success) {
                                 response.data.forEach(user => {
-                                    const option = new Option(
-                                        user.text, 
-                                        user.id, 
-                                        true, 
-                                        true
-                                    );
+                                    const option = new Option(user.text, user.id, true, true);
                                     $('#assigned_users').append(option);
                                 });
                                 $('#assigned_users').trigger('change');
@@ -215,6 +199,7 @@ function saveTaskEdit() {
         task_date: $('#task_date').val(),
         start_time: $('#start_time').val(),
         end_time: $('#end_time').val(),
+        priority_rating: $('#priority_rating').val(),
         assigned_users: $('#assigned_users').val()
     };
 
@@ -236,6 +221,7 @@ function saveTaskEdit() {
         }
     });
 }
+
 function viewTask(targetID) {
     const title = "View Task Details";
     $("#dialog_emp").remove();
@@ -294,5 +280,4 @@ function deleteTask(targetID) {
         }
     );
 }
-
 </script>

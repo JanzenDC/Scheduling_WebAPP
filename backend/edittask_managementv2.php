@@ -74,52 +74,51 @@ switch ($action) {
         $task_date = $_POST['task-date'] ?? null;
         $start_time = $_POST['start-time'] ?? null;
         $end_time = $_POST['end-time'] ?? null;
+        $priority = $_POST['priority'] ?? null;
         $user_ids = isset($_POST['user_ids']) ? json_decode($_POST['user_ids'], true) : [];
-
-        if (!$task_name || !$task_date || !$start_time || !$end_time || empty($user_ids)) {
-            $response['message'] = 'All fields are required, and at least one user must be assigned.';
+    
+        if (!$task_name || !$task_date || !$start_time || !$end_time || !$priority || empty($user_ids)) {
+            $response['message'] = 'All fields are required, including priority, and at least one user must be assigned.';
             echo json_encode($response);
             exit;
         }
-
-        // Start transaction
+    
         mysqli_begin_transaction($conn);
-
+    
         try {
-            // Insert task into tasks table
-            $query = "INSERT INTO tasks (task_name, description, task_date, start_time, end_time) VALUES (?, ?, ?, ?, ?)";
+            $query = "INSERT INTO tasks (task_name, description, task_date, start_time, end_time, rating, priority_rating) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?)";
             $stmt = mysqli_prepare($conn, $query);
-            mysqli_stmt_bind_param($stmt, "sssss", $task_name, $description, $task_date, $start_time, $end_time);
+            mysqli_stmt_bind_param($stmt, "sssssss", $task_name, $description, $task_date, $start_time, $end_time, $priority, $priority);
             if (!mysqli_stmt_execute($stmt)) {
                 throw new Exception("Failed to insert task");
             }
-
+    
             $task_id = mysqli_insert_id($conn);
-
-            // Insert into task_assignments table
+    
             $query = "INSERT INTO task_assignments (task_id, user_id) VALUES (?, ?)";
             $stmt = mysqli_prepare($conn, $query);
-
+    
             foreach ($user_ids as $user_id) {
                 mysqli_stmt_bind_param($stmt, "ii", $task_id, $user_id);
                 if (!mysqli_stmt_execute($stmt)) {
                     throw new Exception("Failed to assign user ID: $user_id");
                 }
             }
-
-            // Commit transaction
+    
             mysqli_commit($conn);
-
+    
             $response['success'] = true;
             $response['message'] = 'Task created and users assigned successfully';
             $response['data'] = ['task_id' => $task_id];
-
+    
         } catch (Exception $e) {
             mysqli_rollback($conn);
             $response['message'] = 'Error: ' . $e->getMessage();
         }
-
+    
         break;
+        
     default:
         $response['message'] = 'Invalid action.';
         break;
