@@ -52,53 +52,75 @@ switch ($action) {
         }
         break;
 
-    case 'register':
-        $firstName = $_POST['firstName'] ?? '';
-        $middleName = $_POST['middleName'] ?? '';
-        $lastName = $_POST['lastName'] ?? '';
-        $email = $_POST['email'] ?? '';
-        $password = $_POST['password'] ?? '';
-        $confirmPassword = $_POST['confirmPassword'] ?? '';
-
-        if (empty($firstName) || empty($lastName) || empty($email) || empty($password) || empty($confirmPassword)) {
-            $response['message'] = 'All fields are required.';
-        } elseif ($password !== $confirmPassword) {
-            $response['message'] = 'Passwords do not match.';
-        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $response['message'] = 'Invalid email format.';
-        } else {
-            $firstName = mysqli_real_escape_string($conn, $firstName);
-            $middleName = mysqli_real_escape_string($conn, $middleName);
-            $lastName = mysqli_real_escape_string($conn, $lastName);
-            $email = mysqli_real_escape_string($conn, $email);
-            $password = mysqli_real_escape_string($conn, $password);
-
-            $checkQuery = "SELECT * FROM users WHERE email = '$email'";
-            $checkResult = mysqli_query($conn, $checkQuery);
-
-            if (mysqli_num_rows($checkResult) > 0) {
-                $response['message'] = 'Email is already registered.';
+        case 'register':
+            // Gather all form data
+            $firstName       = $_POST['firstName']       ?? '';
+            $middleName      = $_POST['middleName']      ?? '';
+            $lastName        = $_POST['lastName']        ?? '';
+            $email           = $_POST['email']           ?? '';
+            $password        = $_POST['password']        ?? '';
+            $confirmPassword = $_POST['confirmPassword'] ?? '';
+        
+            // Additional fields
+            $hasDesignation  = $_POST['hasDesignation']  ?? ''; // "yes" or "no"
+            $designation     = $_POST['designation']     ?? '';
+            $numberOfDeals   = $_POST['numberOfDeals']   ?? '';
+        
+            // Basic validation
+            if (empty($firstName) || empty($lastName) || empty($email) || empty($password) || empty($confirmPassword)) {
+                $response['message'] = 'All required fields must be filled.';
+            } elseif ($password !== $confirmPassword) {
+                $response['message'] = 'Passwords do not match.';
+            } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $response['message'] = 'Invalid email format.';
             } else {
-                $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
-
-                $insertQuery = "INSERT INTO users (fname, mname, lname, email, password) 
-                                VALUES ('$firstName', '$middleName', '$lastName', '$email', '$hashedPassword')";
-
-                if (mysqli_query($conn, $insertQuery)) {
-                    $response['success'] = true;
-                    $response['message'] = 'Registration successful.';
-                    $response['data'] = [
-                        'firstName' => $firstName,
-                        'middleName' => $middleName,
-                        'lastName' => $lastName,
-                        'email' => $email,
-                    ];
+                // Escape all inputs to prevent SQL injection
+                $firstName       = mysqli_real_escape_string($conn, $firstName);
+                $middleName      = mysqli_real_escape_string($conn, $middleName);
+                $lastName        = mysqli_real_escape_string($conn, $lastName);
+                $email           = mysqli_real_escape_string($conn, $email);
+                $password        = mysqli_real_escape_string($conn, $password);
+                $hasDesignation  = mysqli_real_escape_string($conn, $hasDesignation);
+                $designation     = mysqli_real_escape_string($conn, $designation);
+                $numberOfDeals   = mysqli_real_escape_string($conn, $numberOfDeals);
+        
+                // Check if the email already exists
+                $checkQuery  = "SELECT * FROM users WHERE email = '$email'";
+                $checkResult = mysqli_query($conn, $checkQuery);
+        
+                if (mysqli_num_rows($checkResult) > 0) {
+                    $response['message'] = 'Email is already registered.';
                 } else {
-                    $response['message'] = 'Error registering user. Please try again later.';
+                    // Hash the password
+                    $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+        
+                    // Insert into the database (make sure your users table has these columns!)
+                    $insertQuery = "
+                        INSERT INTO users 
+                            (fname, mname, lname, email, password, has_designation, designation, number_of_deals)
+                        VALUES
+                            ('$firstName', '$middleName', '$lastName', '$email', '$hashedPassword', '$hasDesignation', '$designation', '$numberOfDeals')
+                    ";
+        
+                    if (mysqli_query($conn, $insertQuery)) {
+                        $response['success'] = true;
+                        $response['message'] = 'Registration successful.';
+                        $response['data'] = [
+                            'firstName'      => $firstName,
+                            'middleName'     => $middleName,
+                            'lastName'       => $lastName,
+                            'email'          => $email,
+                            'hasDesignation' => $hasDesignation,
+                            'designation'    => $designation,
+                            'numberOfDeals'  => $numberOfDeals
+                        ];
+                    } else {
+                        $response['message'] = 'Error registering user. Please try again later.';
+                    }
                 }
             }
-        }
-        break;
+            break;
+        
 
     default:
         $response['message'] = 'Invalid action.';

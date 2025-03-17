@@ -1,112 +1,133 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register</title>
-    <?php include_once 'header_cdn.php'; ?>
-    <script>
-        $(document).ready(function() {
-            // Show/Hide Password Toggling
-            // 1) For the main password field
-            $('#togglePassword').on('click', function() {
-                let passwordField = $('#password');
-                let icon = $('#toggleIcon');
-                if (passwordField.attr('type') === 'password') {
-                    passwordField.attr('type', 'text');
-                    icon.removeClass('fa-eye').addClass('fa-eye-slash');
-                } else {
-                    passwordField.attr('type', 'password');
-                    icon.removeClass('fa-eye-slash').addClass('fa-eye');
-                }
-            });
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register</title>
+  <?php include_once 'header_cdn.php'; ?>
+  <script>
+    $(document).ready(function() {
+      // Show/Hide Password Toggling
+      // 1) For the main password field
+      $('#togglePassword').on('click', function() {
+        let passwordField = $('#password');
+        let icon = $('#toggleIcon');
+        if (passwordField.attr('type') === 'password') {
+          passwordField.attr('type', 'text');
+          icon.removeClass('fa-eye').addClass('fa-eye-slash');
+        } else {
+          passwordField.attr('type', 'password');
+          icon.removeClass('fa-eye-slash').addClass('fa-eye');
+        }
+      });
 
-            // 2) For the confirm password field
-            $('#toggleConfirmPassword').on('click', function() {
-                let passwordField = $('#confirmPassword');
-                let icon = $('#toggleConfirmIcon');
-                if (passwordField.attr('type') === 'password') {
-                    passwordField.attr('type', 'text');
-                    icon.removeClass('fa-eye').addClass('fa-eye-slash');
-                } else {
-                    passwordField.attr('type', 'password');
-                    icon.removeClass('fa-eye-slash').addClass('fa-eye');
-                }
-            });
+      // 2) For the confirm password field
+      $('#toggleConfirmPassword').on('click', function() {
+        let passwordField = $('#confirmPassword');
+        let icon = $('#toggleConfirmIcon');
+        if (passwordField.attr('type') === 'password') {
+          passwordField.attr('type', 'text');
+          icon.removeClass('fa-eye').addClass('fa-eye-slash');
+        } else {
+          passwordField.attr('type', 'password');
+          icon.removeClass('fa-eye-slash').addClass('fa-eye');
+        }
+      });
 
-            // Registration form submission
-            $('#registerForm').on('submit', function(event) {
-                event.preventDefault();
-                var firstName = $('#firstName').val();
-                var middleName = $('#middleName').val();
-                var lastName = $('#lastName').val();
-                var email = $('#email').val();
-                var password = $('#password').val();
-                var confirmPassword = $('#confirmPassword').val();
+      // Toggle display of designation fields
+      $('input[name="designationOption"]').on('change', function() {
+        if ($(this).val() === 'yes') {
+          $('#designationFields').show();
+          $('#designation').prop('disabled', false);
+          $('#numberOfDeals').prop('disabled', false);
+        } else {
+          $('#designationFields').hide();
+          $('#designation').prop('disabled', true);
+          $('#numberOfDeals').prop('disabled', true);
+        }
+      });
 
-                // Check if passwords match
-                if (password !== confirmPassword) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Registration Failed',
-                        text: 'Passwords do not match'
-                    });
-                    return;
-                }
+      // Registration form submission
+      $('#registerForm').on('submit', function(event) {
+        event.preventDefault();
+        var firstName = $('#firstName').val();
+        var middleName = $('#middleName').val();
+        var lastName = $('#lastName').val();
+        var email = $('#email').val();
+        var password = $('#password').val();
+        var confirmPassword = $('#confirmPassword').val();
 
-                // Make AJAX call to register
-                $.ajax({
-                    url: '../backend/login.php?action=register',
-                    type: 'POST',
-                    data: {
-                        firstName: firstName,
-                        middleName: middleName,
-                        lastName: lastName,
-                        email: email,
-                        password: password,
-                        confirmPassword: confirmPassword
-                    },
-                    success: function(response) {
-                        console.log(response);
-                        if(response.success === true){
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Registration Successful',
-                                text: response.message
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    // Show loading then refresh
-                                    Swal.fire({
-                                        title: 'Loading...',
-                                        allowOutsideClick: false,
-                                        didOpen: () => {
-                                            Swal.showLoading();
-                                        }
-                                    });
-                                    setTimeout(() => {
-                                        location.reload();
-                                    }, 2000);
-                                }
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Registration Failed',
-                                text: response.message
-                            });
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Registration Failed',
-                            text: 'Error: ' + xhr.responseText
-                        });
+        // Get designation info
+        var hasDesignation = $('input[name="designationOption"]:checked').val(); 
+        var designation = $('#designation').val();
+        var numberOfDeals = $('#numberOfDeals').val();
+
+        // Check if passwords match
+        if (password !== confirmPassword) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Registration Failed',
+            text: 'Passwords do not match'
+          });
+          return;
+        }
+
+        // Make AJAX call to register
+        $.ajax({
+          url: '../backend/login.php?action=register',
+          type: 'POST',
+          data: {
+            firstName: firstName,
+            middleName: middleName,
+            lastName: lastName,
+            email: email,
+            password: password,
+            confirmPassword: confirmPassword,
+            hasDesignation: hasDesignation,
+            designation: designation,
+            numberOfDeals: numberOfDeals
+          },
+          success: function(response) {
+            console.log(response);
+            if (response.success === true) {
+              Swal.fire({
+                icon: 'success',
+                title: 'Registration Successful',
+                text: response.message
+              }).then((result) => {
+                if (result.isConfirmed) {
+                  // Show loading then refresh
+                  Swal.fire({
+                    title: 'Loading...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                      Swal.showLoading();
                     }
-                });
+                  });
+                  setTimeout(() => {
+                    location.reload();
+                  }, 2000);
+                }
+              });
+            } else {
+              Swal.fire({
+                icon: 'error',
+                title: 'Registration Failed',
+                text: response.message
+              });
+            }
+          },
+          error: function(xhr, status, error) {
+            Swal.fire({
+              icon: 'error',
+              title: 'Registration Failed',
+              text: 'Error: ' + xhr.responseText
             });
+          }
         });
-    </script>
+      });
+    });
+  </script>
 </head>
 
 <body class="flex items-center justify-center min-h-screen" 
@@ -216,6 +237,54 @@
           >
             <i id="toggleConfirmIcon" class="fa fa-eye"></i>
           </button>
+        </div>
+      </div>
+
+      <!-- Do you have a designation? -->
+      <div class="mb-4">
+        <label class="block text-gray-700 text-sm font-bold mb-2">
+          Do you have a designation?
+        </label>
+        <div>
+          <label class="mr-4">
+            <input type="radio" name="designationOption" value="yes" />
+            Yes
+          </label>
+          <label>
+            <input type="radio" name="designationOption" value="no" checked />
+            No
+          </label>
+        </div>
+      </div>
+
+      <!-- Hidden fields for designation & number of deals -->
+      <div id="designationFields" style="display: none;">
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-bold mb-2" for="designation">
+            Please Enter Your Designation
+          </label>
+          <input
+            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            id="designation"
+            name="designation"
+            type="text"
+            placeholder="Designation"
+            disabled
+          />
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-bold mb-2" for="numberOfDeals">
+            Please Enter the Number of Deals
+          </label>
+          <input
+            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            id="numberOfDeals"
+            name="numberOfDeals"
+            type="number"
+            placeholder="Number of Deals"
+            disabled
+          />
         </div>
       </div>
 
