@@ -182,335 +182,151 @@ echo json_encode($response);
 mysqli_close($conn);
 
 /**
- * Checks for scheduling conflicts for a given task time range and list of users.
- * Considers task priority rating and provides replacement suggestions based on number of deals.
- *
- * @param string $task_date The date on which the task is scheduled.
- * @param string $start_time The starting time of the task.
- * @param string $end_time The ending time of the task.
- * @param array $user_ids Array of user IDs to check.
- * @param int $task_id ID of the current task.
- * @param int $priority_rating Priority rating of the current task.
- *
- * @return array An array containing conflict details and any replacement suggestions.
+ * Creates a new task and handles assignments with priority-based conflict resolution.
+ * 
+ * @param string $task_name The name of the task
+ * @param string $task_date The date of the task
+ * @param string $start_time Start time of the task
+ * @param string $end_time End time of the task
+ * @param int $priority_rating Priority rating of the task (1 = highest, lower numbers = higher priority)
+ * @param array $user_ids Array of user IDs to assign to the task
+ * @return array Result of the task creation and assignment process
  */
-function checkConflicts($task_date, $start_time, $end_time, $user_ids, $task_id, $priority_rating) {
+function createTaskWithPriorityHandling($task_name, $task_date, $start_time, $end_time, $priority_rating, $user_ids) {
     global $conn;
-
+    
+    // 1. Create the new task
+    $query = "INSERT INTO tasks (task_name, task_date, start_time, end_time, priority_rating) 
+              VALUES ('$task_name', '$task_date', '$start_time', '$end_time', $priority_rating)";
+    
+    if (!mysqli_query($conn, $query)) {
+        return ['success' => false, 'message' => 'Failed to create task: ' . mysqli_error($conn)];
+    }
+    
+    $new_task_id = mysqli_insert_id($conn);
+    
+    // 2. Check for conflicts with existing tasks
     $conflicts = [];
-    $users_to_reassign = [];
-
+    $available_users = [];
+    
     foreach ($user_ids as $user_id) {
-        $user_id = mysqli_real_escape_string($conn, $user_id);
+        // Find any overlapping tasks for this user
+        $conflict_query = "SELECT t.task_id, t.task_name, t.priority_rating 
+                          FROM tasks t
+                          JOIN task_assignments ta ON t.task_id = ta.task_id
+                          WHERE ta.user_id = $user_id
+                          AND t.task_date = '$task_date'
+                          AND (t.start_time < '$end_time' AND t.end_time > '$start_time')";
+                          
+        $conflict_result = mysqli_query($conn, $conflict_query);
         
-        // Check for existing task assignments that conflict with the proposed time
-        $query = "SELECT t.task_id, t.task_name, t.start_time, t.end_time, t.priority_rating,
-                  CONCAT(u.fname, ' ', COALESCE(u.mname, ''), ' ', u.lname) as user_name,
-                  r.role_name as role, u.number_of_deals, u.has_designation
-                  FROM tasks t 
-                  JOIN task_assignments ta ON t.task_id = ta.task_id 
-                  JOIN users u ON ta.user_id = u.user_id
-                  JOIN user_roles ur ON u.user_id = ur.user_id
-                  JOIN roles r ON ur.role_id = r.role_id
-                  WHERE ta.user_id = $user_id 
-                  AND t.task_date = '$task_date' 
-                  AND (t.start_time < '$end_time' AND t.end_time > '$start_time')";
-
-        $result = mysqli_query($conn, $query);
+        $has_conflict = false;
+        $to_reassign = [];
         
-        if ($result && mysqli_num_rows($result) > 0) {
-            $row = mysqli_fetch_assoc($result);
-            
-            // Convert times to 12-hour format
-            $start_time_12hr = date("g:i A", strtotime($row['start_time']));
-            $end_time_12hr = date("g:i A", strtotime($row['end_time']));
-            
-            $conflicting_task_rating = $row['priority_rating'];
-            $conflicting_task_id = $row['task_id'];
-            
-            // Compare task ratings to determine which task gets priority
-            if ($priority_rating < $conflicting_task_rating) {  // Note: Lower number means higher priority in your example
-                // Current task has higher priority
-                // The user should be removed from the conflicting task
-                $users_to_reassign[] = [
-                    'user_id' => $user_id,
-                    'task_id' => $conflicting_task_id,
-                    'user_name' => $row['user_name'],
-                    'role' => $row['role'],
-                    'number_of_deals' => $row['number_of_deals'],
-                    'has_designation' => $row['has_designation']
-                ];
+        if ($conflict_result && mysqli_num_rows($conflict_result) > 0) {
+            while ($conflict_task = mysqli_fetch_assoc($conflict_result)) {
+                $conflict_task_id = $conflict_task['task_id'];
+                $conflict_priority = $conflict_task['priority_rating'];
                 
-                // No conflict reported for current task
-                continue;
-            } else {
-                // Conflicting task has equal or higher priority
-                // The user can't be assigned to the current task
-                $suggestions = suggestReplacement($task_date, $start_time, $end_time, $user_id, $row['number_of_deals']);
-                
-                $conflicts[] = [
-                    'user_id' => $user_id,
-                    'user_name' => trim($row['user_name']),
-                    'task_name' => $row['task_name'],
-                    'start_time' => $start_time_12hr,
-                    'end_time' => $end_time_12hr,
-                    'role' => $row['role'],
-                    'number_of_deals' => $row['number_of_deals'],
-                    'conflicting_task_rating' => $conflicting_task_rating,
-                    'suggestions' => $suggestions
-                ];
-            }
-        }
-    }
-    
-    // Process users that need to be reassigned from their current tasks
-    foreach ($users_to_reassign as $reassignment) {
-        removeUserFromTask($reassignment['user_id'], $reassignment['task_id']);
-        // Find replacements for the task they're being removed from
-        $suggestions = suggestReplacement($task_date, $start_time, $end_time, $reassignment['user_id'], $reassignment['number_of_deals']);
-        
-        // Assign one of the suggested replacements to the lower priority task
-        if (!empty($suggestions['designated'])) {
-            assignUserToTask($suggestions['designated'][0]['user_id'], $reassignment['task_id']);
-        } elseif (!empty($suggestions['undesignated'])) {
-            assignUserToTask($suggestions['undesignated'][0]['user_id'], $reassignment['task_id']);
-        }
-    }
-
-    return $conflicts;
-}
-
-/**
- * Removes a user from a task assignment.
- *
- * @param int $user_id The ID of the user to remove.
- * @param int $task_id The ID of the task from which to remove the user.
- * @return bool True if successful, false otherwise.
- */
-function removeUserFromTask($user_id, $task_id) {
-    global $conn;
-    
-    $user_id = mysqli_real_escape_string($conn, $user_id);
-    $task_id = mysqli_real_escape_string($conn, $task_id);
-    
-    $query = "DELETE FROM task_assignments WHERE user_id = $user_id AND task_id = $task_id";
-    return mysqli_query($conn, $query);
-}
-
-/**
- * Assigns a user to a task.
- *
- * @param int $user_id The ID of the user to assign.
- * @param int $task_id The ID of the task to which to assign the user.
- * @return bool True if successful, false otherwise.
- */
-function assignUserToTask($user_id, $task_id) {
-    global $conn;
-    
-    $user_id = mysqli_real_escape_string($conn, $user_id);
-    $task_id = mysqli_real_escape_string($conn, $task_id);
-    
-    $query = "INSERT INTO task_assignments (user_id, task_id) VALUES ($user_id, $task_id)";
-    return mysqli_query($conn, $query);
-}
-
-/**
- * Suggests replacement personnel for a conflicting user.
- *
- * This function finds other users with the same role who are available during the specified time.
- * It prioritizes users with the same or next higher number of deals and distinguishes between
- * designated and undesignated personnel.
- *
- * @param string $task_date The date of the task.
- * @param string $start_time The start time of the task.
- * @param string $end_time The end time of the task.
- * @param int $conflicting_user_id The user ID of the conflicting user.
- * @param int $user_deals The number of deals of the conflicting user.
- *
- * @return array An array of available replacement personnel, sorted by number of deals.
- */
-function suggestReplacement($task_date, $start_time, $end_time, $conflicting_user_id, $user_deals) {
-    global $conn;
-    
-    // Retrieve the role of the conflicting user via the user_roles and roles tables.
-    $userQuery = "SELECT r.role_name as role
-                  FROM user_roles ur
-                  JOIN roles r ON ur.role_id = r.role_id
-                  WHERE ur.user_id = $conflicting_user_id";
-    $userResult = mysqli_query($conn, $userQuery);
-    
-    if ($userResult && mysqli_num_rows($userResult) > 0) {
-        $userData = mysqli_fetch_assoc($userResult);
-        $userRole = $userData['role'];
-    } else {
-        // Return empty arrays if no role is found.
-        return ['designated' => [], 'undesignated' => []];
-    }
-    
-    $designatedCandidates = [];
-    $undesignatedCandidates = [];
-    
-    // Select other users with the same role (excluding the conflicting user)
-    $query = "SELECT u.user_id, 
-              CONCAT(u.fname, ' ', COALESCE(u.mname, ''), ' ', u.lname) as full_name,
-              u.number_of_deals, 
-              u.has_designation
-              FROM users u
-              JOIN user_roles ur ON u.user_id = ur.user_id
-              JOIN roles r ON ur.role_id = r.role_id
-              WHERE LOWER(r.role_name) = LOWER('$userRole') 
-              AND u.user_id != $conflicting_user_id
-              ORDER BY 
-                CASE 
-                    WHEN u.number_of_deals = $user_deals THEN 0
-                    WHEN u.number_of_deals > $user_deals THEN 1
-                    ELSE 2
-                END,
-                u.number_of_deals ASC";
-    
-    $result = mysqli_query($conn, $query);
-    
-    if ($result) {
-        while ($row = mysqli_fetch_assoc($result)) {
-            $candidate_id = $row['user_id'];
-            
-            // Check if the candidate has any task conflicts during the specified time slot
-            $availabilityQuery = "SELECT t.task_id FROM tasks t
-                                  JOIN task_assignments ta ON t.task_id = ta.task_id
-                                  WHERE ta.user_id = $candidate_id 
-                                  AND t.task_date = '$task_date'
-                                  AND (t.start_time < '$end_time' AND t.end_time > '$start_time')";
-            $availabilityResult = mysqli_query($conn, $availabilityQuery);
-            
-            if ($availabilityResult && mysqli_num_rows($availabilityResult) == 0) {
-                // Candidate is available; add to the appropriate suggestion list
-                $candidateInfo = [
-                    'user_id' => $candidate_id,
-                    'name' => trim($row['full_name']),
-                    'number_of_deals' => $row['number_of_deals']
-                ];
-                
-                if (strtolower($row['has_designation']) === 'yes') {
-                    $designatedCandidates[] = $candidateInfo;
-                } else {
-                    $undesignatedCandidates[] = $candidateInfo;
+                // Case 1: New task has higher priority (lower number)
+                if ($priority_rating < $conflict_priority) {
+                    // Remove user from lower priority task
+                    $to_reassign[] = $conflict_task_id;
+                    $has_conflict = false; // User can be assigned to new task
+                } 
+                // Case 2: New task has same priority as existing task
+                else if ($priority_rating == $conflict_priority) {
+                    // User can't be assigned to new task
+                    $has_conflict = true;
+                    $conflicts[] = [
+                        'user_id' => $user_id,
+                        'task_name' => $conflict_task['task_name'],
+                        'reason' => 'Already assigned to task with same priority'
+                    ];
+                    break;
+                }
+                // Case 3: New task has lower priority than existing task
+                else {
+                    // User can't be assigned to new task
+                    $has_conflict = true;
+                    $conflicts[] = [
+                        'user_id' => $user_id,
+                        'task_name' => $conflict_task['task_name'],
+                        'reason' => 'Already assigned to higher priority task'
+                    ];
+                    break;
                 }
             }
         }
-    }
-    
-    // Sort designated candidates by deals priority
-    usort($designatedCandidates, function($a, $b) use ($user_deals) {
-        // Same deals as the conflicting user get highest priority
-        if ($a['number_of_deals'] == $user_deals && $b['number_of_deals'] != $user_deals) {
-            return -1;
-        }
-        if ($a['number_of_deals'] != $user_deals && $b['number_of_deals'] == $user_deals) {
-            return 1;
-        }
         
-        // Next highest deals get second priority
-        if ($a['number_of_deals'] > $user_deals && $b['number_of_deals'] <= $user_deals) {
-            return -1;
-        }
-        if ($a['number_of_deals'] <= $user_deals && $b['number_of_deals'] > $user_deals) {
-            return 1;
-        }
-        
-        // Otherwise, sort by deals (ascending)
-        return $a['number_of_deals'] - $b['number_of_deals'];
-    });
-    
-    // Same sorting for undesignated candidates
-    usort($undesignatedCandidates, function($a, $b) use ($user_deals) {
-        if ($a['number_of_deals'] == $user_deals && $b['number_of_deals'] != $user_deals) {
-            return -1;
-        }
-        if ($a['number_of_deals'] != $user_deals && $b['number_of_deals'] == $user_deals) {
-            return 1;
-        }
-        
-        if ($a['number_of_deals'] > $user_deals && $b['number_of_deals'] <= $user_deals) {
-            return -1;
-        }
-        if ($a['number_of_deals'] <= $user_deals && $b['number_of_deals'] > $user_deals) {
-            return 1;
-        }
-        
-        return $a['number_of_deals'] - $b['number_of_deals'];
-    });
-    
-    return [
-        'designated' => $designatedCandidates,
-        'undesignated' => $undesignatedCandidates
-    ];
-}
-
-/**
- * Main function to handle task assignment with conflict resolution.
- * 
- * @param int $task_id The ID of the task to be assigned.
- * @param array $user_ids Array of user IDs to assign to the task.
- * @return array An array containing assignment results and any conflicts.
- */
-function assignTaskWithConflictResolution($task_id, $user_ids) {
-    global $conn;
-    
-    // Get task details
-    $task_query = "SELECT task_date, start_time, end_time, priority_rating FROM tasks WHERE task_id = $task_id";
-    $task_result = mysqli_query($conn, $task_query);
-    
-    if (!$task_result || mysqli_num_rows($task_result) == 0) {
-        return ['success' => false, 'message' => 'Task not found'];
-    }
-    
-    $task_data = mysqli_fetch_assoc($task_result);
-    $task_date = $task_data['task_date'];
-    $start_time = $task_data['start_time'];
-    $end_time = $task_data['end_time'];
-    $priority_rating = $task_data['priority_rating'];
-    
-    // Check for scheduling conflicts
-    $conflicts = checkConflicts($task_date, $start_time, $end_time, $user_ids, $task_id, $priority_rating);
-    
-    // Assign users who don't have conflicts
-    $successfully_assigned = [];
-    $not_assigned = [];
-    
-    foreach ($user_ids as $user_id) {
-        // Check if this user has a conflict
-        $has_conflict = false;
-        foreach ($conflicts as $conflict) {
-            if ($conflict['user_id'] == $user_id) {
-                $has_conflict = true;
-                $not_assigned[] = [
-                    'user_id' => $user_id,
-                    'reason' => 'Conflict with higher priority task: ' . $conflict['task_name'],
-                    'suggested_replacements' => $conflict['suggestions']
-                ];
-                break;
-            }
-        }
-        
+        // If user can be assigned to this task
         if (!$has_conflict) {
-            // Assign user to task
-            if (assignUserToTask($user_id, $task_id)) {
-                $successfully_assigned[] = $user_id;
-            } else {
-                $not_assigned[] = [
-                    'user_id' => $user_id,
-                    'reason' => 'Database error while assigning',
-                    'suggested_replacements' => []
-                ];
+            $available_users[] = $user_id;
+            
+            // Remove user from any lower priority tasks
+            foreach ($to_reassign as $task_id) {
+                $remove_query = "DELETE FROM task_assignments 
+                                WHERE user_id = $user_id AND task_id = $task_id";
+                mysqli_query($conn, $remove_query);
             }
+            
+            // Assign user to new task
+            $assign_query = "INSERT INTO task_assignments (task_id, user_id) 
+                            VALUES ($new_task_id, $user_id)";
+            mysqli_query($conn, $assign_query);
         }
     }
     
     return [
         'success' => true,
-        'assigned_users' => $successfully_assigned,
-        'unassigned_users' => $not_assigned,
+        'task_id' => $new_task_id,
+        'assigned_users' => $available_users,
         'conflicts' => $conflicts
     ];
+}
+
+/**
+ * Get available users for a task based on time and priority
+ * 
+ * @param string $task_date The date of the task
+ * @param string $start_time Start time of the task
+ * @param string $end_time End time of the task
+ * @param int $priority_rating Priority rating of the new task
+ * @return array Array of available users
+ */
+function getAvailableUsers($task_date, $start_time, $end_time, $priority_rating) {
+    global $conn;
+    
+    // Get all users
+    $query = "SELECT user_id, CONCAT(fname, ' ', COALESCE(mname, ''), ' ', lname) as full_name 
+              FROM users";
+    $result = mysqli_query($conn, $query);
+    
+    $available_users = [];
+    
+    while ($user = mysqli_fetch_assoc($result)) {
+        $user_id = $user['user_id'];
+        
+        // Check if user has conflict with higher or equal priority task
+        $conflict_query = "SELECT t.task_id 
+                          FROM tasks t
+                          JOIN task_assignments ta ON t.task_id = ta.task_id
+                          WHERE ta.user_id = $user_id
+                          AND t.task_date = '$task_date'
+                          AND (t.start_time < '$end_time' AND t.end_time > '$start_time')
+                          AND t.priority_rating <= $priority_rating"; // Lower or equal number = higher or equal priority
+                          
+        $conflict_result = mysqli_query($conn, $conflict_query);
+        
+        // If no conflicts with higher or equal priority tasks
+        if (mysqli_num_rows($conflict_result) == 0) {
+            $available_users[] = [
+                'user_id' => $user_id,
+                'name' => trim($user['full_name'])
+            ];
+        }
+    }
+    
+    return $available_users;
 }
 ?>
