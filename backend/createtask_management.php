@@ -194,16 +194,21 @@ switch ($action) {
 
 echo json_encode($response);
 mysqli_close($conn);
-
 /**
  * Creates a new task and handles assignments with priority-based conflict resolution.
  * 
+ * SCENARIO 2 Clarification:
+ * - If an admin selects a user (i.e. their ID is in $user_ids) and the new task has a higher priority 
+ *   (lower numeric value) than an existing overlapping task, the user is removed from that lower-priority task
+ *   and reassigned to the new task.
+ * - If the admin does not select the user, they remain assigned to their existing task.
+ *
  * @param string $task_name The name of the task
  * @param string $task_date The date of the task
  * @param string $start_time Start time of the task
  * @param string $end_time End time of the task
  * @param int $priority_rating Priority rating of the task (1 = highest, lower numbers = higher priority)
- * @param array $user_ids Array of user IDs to assign to the task
+ * @param array $user_ids Array of user IDs to assign to the task (only these users are processed)
  * @return array Result of the task creation and assignment process
  */
 function createTaskWithPriorityHandling($task_name, $task_date, $start_time, $end_time, $priority_rating, $user_ids) {
@@ -219,18 +224,18 @@ function createTaskWithPriorityHandling($task_name, $task_date, $start_time, $en
     
     $new_task_id = mysqli_insert_id($conn);
     
-    // 2. Check for conflicts with existing tasks
+    // 2. Process only the users explicitly selected by the admin ($user_ids array)
     $conflicts = [];
     $available_users = [];
     
     foreach ($user_ids as $user_id) {
-        // Find any overlapping tasks for this user
+        // Find any overlapping tasks for this user on the same date
         $conflict_query = "SELECT t.task_id, t.task_name, t.priority_rating 
-                          FROM tasks t
-                          JOIN task_assignments ta ON t.task_id = ta.task_id
-                          WHERE ta.user_id = $user_id
-                          AND t.task_date = '$task_date'
-                          AND (t.start_time < '$end_time' AND t.end_time > '$start_time')";
+                           FROM tasks t
+                           JOIN task_assignments ta ON t.task_id = ta.task_id
+                           WHERE ta.user_id = $user_id
+                           AND t.task_date = '$task_date'
+                           AND (t.start_time < '$end_time' AND t.end_time > '$start_time')";
                           
         $conflict_result = mysqli_query($conn, $conflict_query);
         
@@ -244,13 +249,14 @@ function createTaskWithPriorityHandling($task_name, $task_date, $start_time, $en
                 
                 // Case 1: New task has higher priority (lower number)
                 if ($priority_rating < $conflict_priority) {
-                    // Remove user from lower priority task
+                    // Queue removal from the lower priority task
                     $to_reassign[] = $conflict_task_id;
-                    $has_conflict = false; // User can be assigned to new task
+                    // No conflict prevents assignment
+                    $has_conflict = false;
                 } 
-                // Case 2: New task has same priority as existing task
+                // Case 2: New task has same priority as an existing task
                 else if ($priority_rating == $conflict_priority) {
-                    // User can't be assigned to new task
+                    // Conflict exists: user is already in a task with same priority; do not reassign
                     $has_conflict = true;
                     $conflicts[] = [
                         'user_id' => $user_id,
@@ -259,9 +265,9 @@ function createTaskWithPriorityHandling($task_name, $task_date, $start_time, $en
                     ];
                     break;
                 }
-                // Case 3: New task has lower priority than existing task
+                // Case 3: New task has lower priority than an existing task
                 else {
-                    // User can't be assigned to new task
+                    // Conflict exists: user is already in a higher priority task; do not reassign
                     $has_conflict = true;
                     $conflicts[] = [
                         'user_id' => $user_id,
@@ -273,20 +279,20 @@ function createTaskWithPriorityHandling($task_name, $task_date, $start_time, $en
             }
         }
         
-        // If user can be assigned to this task
+        // If no conflict prevents assignment, process the user:
         if (!$has_conflict) {
             $available_users[] = $user_id;
             
-            // Remove user from any lower priority tasks
+            // Remove the user from any overlapping lower priority tasks
             foreach ($to_reassign as $task_id) {
                 $remove_query = "DELETE FROM task_assignments 
-                                WHERE user_id = $user_id AND task_id = $task_id";
+                                 WHERE user_id = $user_id AND task_id = $task_id";
                 mysqli_query($conn, $remove_query);
             }
             
-            // Assign user to new task
+            // Assign the user to the new task
             $assign_query = "INSERT INTO task_assignments (task_id, user_id) 
-                            VALUES ($new_task_id, $user_id)";
+                             VALUES ($new_task_id, $user_id)";
             mysqli_query($conn, $assign_query);
         }
     }
@@ -300,8 +306,14 @@ function createTaskWithPriorityHandling($task_name, $task_date, $start_time, $en
 }
 
 /**
- * Get available users for a task based on time and priority
- * 
+ * Get available users for a task based on time and priority.
+ *
+ * SCENARIO 3 Clarification:
+ * - Users already assigned to tasks with a higher or equal priority (lower or equal numeric value) 
+ *   will not appear in the suggestion list.
+ * - For example, if Janzen and Karen are already assigned to a Research 2 task with priority 1,
+ *   they are excluded when suggesting users for a new task.
+ *
  * @param string $task_date The date of the task
  * @param string $start_time Start time of the task
  * @param string $end_time End time of the task
@@ -321,18 +333,18 @@ function getAvailableUsers($task_date, $start_time, $end_time, $priority_rating)
     while ($user = mysqli_fetch_assoc($result)) {
         $user_id = $user['user_id'];
         
-        // Check if user has conflict with higher or equal priority task
+        // Check for any overlapping task with higher or equal priority
         $conflict_query = "SELECT t.task_id 
-                          FROM tasks t
-                          JOIN task_assignments ta ON t.task_id = ta.task_id
-                          WHERE ta.user_id = $user_id
-                          AND t.task_date = '$task_date'
-                          AND (t.start_time < '$end_time' AND t.end_time > '$start_time')
-                          AND t.priority_rating <= $priority_rating"; // Lower or equal number = higher or equal priority
+                           FROM tasks t
+                           JOIN task_assignments ta ON t.task_id = ta.task_id
+                           WHERE ta.user_id = $user_id
+                           AND t.task_date = '$task_date'
+                           AND (t.start_time < '$end_time' AND t.end_time > '$start_time')
+                           AND t.priority_rating <= $priority_rating";
                           
         $conflict_result = mysqli_query($conn, $conflict_query);
         
-        // If no conflicts with higher or equal priority tasks
+        // Only include users without a conflicting high/equal priority task
         if (mysqli_num_rows($conflict_result) == 0) {
             $available_users[] = [
                 'user_id' => $user_id,
@@ -343,4 +355,5 @@ function getAvailableUsers($task_date, $start_time, $end_time, $priority_rating)
     
     return $available_users;
 }
+
 ?>
