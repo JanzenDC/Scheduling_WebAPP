@@ -3,13 +3,13 @@ const BASE_URL = '<?php echo $baseUrl; ?>';
 $(document).ready(function () {
     $("#save-task-button").click(function () {
         let taskData = {
-            "priority": $("#priority").val(), // Changed id_priority to priority
+            "priority": $("#priority").val(),
             "task-name": $("#task-name").val(),
             "description": $("#description").val(),
             "task-date": $("#task-date").val(),
             "start-time": $("#start-time").val(),
             "end-time": $("#end-time").val(),
-            "user_ids": JSON.stringify($("#user-select").val()) // Collect multiple user IDs
+            "user_ids": JSON.stringify($("#user-select").val())
         };
 
         $.ajax({
@@ -25,8 +25,10 @@ $(document).ready(function () {
                     showToast(response.message, "error");
                 }
             },
-            error: function() {
-                showToast("Failed to save task.", "error");
+            error: function(xhr, status, error) {
+                let errorMessage = xhr.responseText || "Failed to save task.";
+                showToast(`Error: ${status} - ${errorMessage}`, "error");
+                console.error("XHR Error:", error);
             }
         });
     });

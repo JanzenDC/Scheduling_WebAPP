@@ -1,4 +1,7 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -101,7 +104,8 @@ switch ($action) {
             $user_ids   = $data['user_ids'];
             
             // Check for task conflicts and retrieve any available replacement suggestions.
-            $conflicts = checkConflicts($task_date, $start_time, $end_time, $user_ids);
+            $priority_rating = mysqli_real_escape_string($conn, $data['priority']);
+            $conflicts = checkConflicts($task_date, $start_time, $end_time, $user_ids, $priority_rating);
             
             $response['success'] = true;
             $response['data'] = $conflicts;
@@ -111,16 +115,16 @@ switch ($action) {
 
     case 'create_task':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $data = json_decode(file_get_contents('php://input'), true);
+
             
             // Sanitize task details.
-            $task_name      = mysqli_real_escape_string($conn, $data['task-name']);
-            $description    = mysqli_real_escape_string($conn, $data['description']);
-            $task_date      = mysqli_real_escape_string($conn, $data['task-date']);
-            $start_time     = mysqli_real_escape_string($conn, $data['start-time']);
-            $end_time       = mysqli_real_escape_string($conn, $data['end-time']);
-            $priority       = mysqli_real_escape_string($conn, $data['priority']); // Priority field (1 = highest)
-            $assigned_users = $data['user_ids'];
+            $task_name      = mysqli_real_escape_string($conn, $_POST['task-name']);
+            $description    = mysqli_real_escape_string($conn, $_POST['description']);
+            $task_date      = mysqli_real_escape_string($conn, $_POST['task-date']);
+            $start_time     = mysqli_real_escape_string($conn, $_POST['start-time']);
+            $end_time       = mysqli_real_escape_string($conn, $_POST['end-time']);
+            $priority       = mysqli_real_escape_string($conn, $_POST['priority']); // Priority field (1 = highest)
+            $assigned_users = isset($_POST['user_ids']) ? json_decode($_POST['user_ids'], true) : [];
             
             // Use the priority-based task creation function instead of direct assignment
             $result = createTaskWithPriorityHandling(
