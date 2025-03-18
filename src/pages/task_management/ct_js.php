@@ -13,7 +13,7 @@ $(document).ready(function () {
         };
 
         $.ajax({
-            url: BASE_URL + 'backend/edittask_managementv2.php?action=save_task',
+            url: BASE_URL + 'backend/createtask_management.php?action=create_task',
             type: 'POST',
             data: taskData,
             dataType: 'json',

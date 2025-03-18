@@ -16,57 +16,79 @@ $action = $_GET['action'] ?? '';
 
 switch ($action) {
     case 'fetch_users':
-        $query = "
-            SELECT 
-                u.user_id, 
-                CONCAT(u.fname, ' ', COALESCE(u.mname, ''), ' ', u.lname) AS full_name,
-                t.created_at AS task_created
-            FROM users u
-            LEFT JOIN task_assignments ta ON u.user_id = ta.user_id
-            LEFT JOIN tasks t ON ta.task_id = t.task_id
-            WHERE u.user_id NOT IN (
-                SELECT ur.user_id
-                FROM user_roles ur
-                JOIN roles r ON ur.role_id = r.role_id
-                WHERE UPPER(r.role_name) IN ('ADMIN','SUPER ADMIN')
-            )
-            ORDER BY u.fname
-        ";
-    
-        $result = mysqli_query($conn, $query);
+        // Check if we're fetching users for a specific task time slot and priority
+        $task_date = isset($_GET['task_date']) ? mysqli_real_escape_string($conn, $_GET['task_date']) : null;
+        $start_time = isset($_GET['start_time']) ? mysqli_real_escape_string($conn, $_GET['start_time']) : null;
+        $end_time = isset($_GET['end_time']) ? mysqli_real_escape_string($conn, $_GET['end_time']) : null;
+        $priority_rating = isset($_GET['priority']) ? mysqli_real_escape_string($conn, $_GET['priority']) : null;
         
-        if ($result) {
-            $users = mysqli_fetch_all($result, MYSQLI_ASSOC);
+        // If all time parameters are provided, use priority-based availability checking
+        if ($task_date && $start_time && $end_time && $priority_rating !== null) {
+            $available_users = getAvailableUsers($task_date, $start_time, $end_time, $priority_rating);
             
             $response['success'] = true;
-            $response['data'] = array_map(function($row) {
-                $user_data = [
-                    'id'   => $row['user_id'],
-                    'name' => trim($row['full_name']),
+            $response['data'] = array_map(function($user) {
+                return [
+                    'id' => $user['user_id'],
+                    'name' => $user['name'],
+                    'availability' => 'Available',
+                    'suggestion_tag' => '' // You might want to add logic for suggestion tags
                 ];
-    
-                // Tag with a suggestion note if no task has been created.
-                if (empty($row['task_created'])) {
-                    $user_data['suggestion_tag'] = 'Suggestion tag';
-                }
+            }, $available_users);
+        } 
+        // Otherwise, use the original query to fetch all users
+        else {
+            $query = "
+                SELECT 
+                    u.user_id, 
+                    CONCAT(u.fname, ' ', COALESCE(u.mname, ''), ' ', u.lname) AS full_name,
+                    t.created_at AS task_created
+                FROM users u
+                LEFT JOIN task_assignments ta ON u.user_id = ta.user_id
+                LEFT JOIN tasks t ON ta.task_id = t.task_id
+                WHERE u.user_id NOT IN (
+                    SELECT ur.user_id
+                    FROM user_roles ur
+                    JOIN roles r ON ur.role_id = r.role_id
+                    WHERE UPPER(r.role_name) IN ('ADMIN','SUPER ADMIN')
+                )
+                ORDER BY u.fname
+            ";
+        
+            $result = mysqli_query($conn, $query);
+            
+            if ($result) {
+                $users = mysqli_fetch_all($result, MYSQLI_ASSOC);
                 
-                // Determine user availability based on whether a task was created today.
-                $current_date      = date('Y-m-d');
-                $task_created_date = !empty($row['task_created']) 
-                                     ? date('Y-m-d', strtotime($row['task_created'])) 
-                                     : '';
-    
-                $user_data['availability'] = ($task_created_date === $current_date) 
-                                             ? 'Not Available' 
-                                             : 'Available';
-                
-                return $user_data;
-            }, $users);
-        } else {
-            $response['message'] = 'Failed to fetch users';
+                $response['success'] = true;
+                $response['data'] = array_map(function($row) {
+                    $user_data = [
+                        'id'   => $row['user_id'],
+                        'name' => trim($row['full_name']),
+                    ];
+        
+                    // Tag with a suggestion note if no task has been created.
+                    if (empty($row['task_created'])) {
+                        $user_data['suggestion_tag'] = 'Suggestion tag';
+                    }
+                    
+                    // Determine user availability based on whether a task was created today.
+                    $current_date      = date('Y-m-d');
+                    $task_created_date = !empty($row['task_created']) 
+                                         ? date('Y-m-d', strtotime($row['task_created'])) 
+                                         : '';
+        
+                    $user_data['availability'] = ($task_created_date === $current_date) 
+                                                 ? 'Not Available' 
+                                                 : 'Available';
+                    
+                    return $user_data;
+                }, $users);
+            } else {
+                $response['message'] = 'Failed to fetch users';
+            }
         }
         break;
-    
     
     case 'check_conflicts':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -87,61 +109,53 @@ switch ($action) {
         }
         break;
 
-        case 'create_task':
-            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                $data = json_decode(file_get_contents('php://input'), true);
-                
-                // Sanitize task details.
-                $task_name      = mysqli_real_escape_string($conn, $data['task_name']);
-                $description    = mysqli_real_escape_string($conn, $data['description']);
-                $task_date      = mysqli_real_escape_string($conn, $data['task_date']);
-                $start_time     = mysqli_real_escape_string($conn, $data['start_time']);
-                $end_time       = mysqli_real_escape_string($conn, $data['end_time']);
-                $priority       = mysqli_real_escape_string($conn, $data['priority']); // Added priority field
-                $assigned_users = $data['assigned_users'];
-                
-                // Check if any of the assigned users have conflicting tasks.
-                $conflict_check = checkConflicts($task_date, $start_time, $end_time, $assigned_users);
-                
-                if (!empty($conflict_check)) {
-                    $response['success'] = false;
-                    $response['message'] = 'There are conflicts with existing tasks.';
-                    $response['data'] = $conflict_check;
-                    echo json_encode($response);
-                    exit;
-                }
-                
-                mysqli_begin_transaction($conn);
-                
-                try {
-                    $query = "INSERT INTO tasks (task_name, description, task_date, start_time, end_time, rating, priority_rating) 
-                              VALUES ('$task_name', '$description', '$task_date', '$start_time', '$end_time', '$priority', '$priority')";
-                    
-                    if (!mysqli_query($conn, $query)) {
-                        throw new Exception('Failed to create task');
-                    }
-                    
-                    $task_id = mysqli_insert_id($conn);
-                    
-                    foreach ($assigned_users as $user_id) {
-                        $user_id = mysqli_real_escape_string($conn, $user_id);
-                        $query = "INSERT INTO task_assignments (task_id, user_id) 
-                                  VALUES ($task_id, $user_id)";
-                        
-                        if (!mysqli_query($conn, $query)) {
-                            throw new Exception('Failed to assign users');
-                        }
-                    }
-                    
-                    mysqli_commit($conn);
+    case 'create_task':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            
+            // Sanitize task details.
+            $task_name      = mysqli_real_escape_string($conn, $data['task-name']);
+            $description    = mysqli_real_escape_string($conn, $data['description']);
+            $task_date      = mysqli_real_escape_string($conn, $data['task-date']);
+            $start_time     = mysqli_real_escape_string($conn, $data['start-time']);
+            $end_time       = mysqli_real_escape_string($conn, $data['end-time']);
+            $priority       = mysqli_real_escape_string($conn, $data['priority']); // Priority field (1 = highest)
+            $assigned_users = $data['user_ids'];
+            
+            // Use the priority-based task creation function instead of direct assignment
+            $result = createTaskWithPriorityHandling(
+                $task_name,
+                $task_date,
+                $start_time,
+                $end_time,
+                $priority,
+                $assigned_users
+            );
+            
+            if ($result['success']) {
+                // Check if there were any conflicts and some users weren't assigned
+                if (!empty($result['conflicts'])) {
                     $response['success'] = true;
-                    $response['message'] = 'Task created successfully';
-                } catch (Exception $e) {
-                    mysqli_rollback($conn);
-                    $response['message'] = $e->getMessage();
+                    $response['message'] = 'Task created, but some users could not be assigned due to conflicts.';
+                    $response['data'] = [
+                        'task_id' => $result['task_id'],
+                        'assigned_users' => $result['assigned_users'],
+                        'conflicts' => $result['conflicts']
+                    ];
+                } else {
+                    $response['success'] = true;
+                    $response['message'] = 'Task created successfully and all users assigned.';
+                    $response['data'] = [
+                        'task_id' => $result['task_id'],
+                        'assigned_users' => $result['assigned_users']
+                    ];
                 }
+            } else {
+                $response['success'] = false;
+                $response['message'] = $result['message'];
             }
-            break;
+        }
+        break;
         
 
     case 'fetch_tasks':
