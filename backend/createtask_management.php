@@ -25,7 +25,6 @@ switch ($action) {
         $end_time = isset($_GET['end_time']) ? mysqli_real_escape_string($conn, $_GET['end_time']) : null;
         $priority_rating = isset($_GET['priority']) ? mysqli_real_escape_string($conn, $_GET['priority']) : null;
         
-        // If all time parameters are provided, use priority-based availability checking
         if ($task_date && $start_time && $end_time && $priority_rating !== null) {
             $available_users = getAvailableUsers($task_date, $start_time, $end_time, $priority_rating);
             
@@ -35,63 +34,13 @@ switch ($action) {
                     'id' => $user['user_id'],
                     'name' => $user['name'],
                     'availability' => 'Available',
-                    'suggestion_tag' => '' // You might want to add logic for suggestion tags
                 ];
             }, $available_users);
-        } 
-        // Otherwise, use the original query to fetch all users
-        else {
-            $query = "
-                SELECT 
-                    u.user_id, 
-                    CONCAT(u.fname, ' ', COALESCE(u.mname, ''), ' ', u.lname) AS full_name,
-                    t.created_at AS task_created
-                FROM users u
-                LEFT JOIN task_assignments ta ON u.user_id = ta.user_id
-                LEFT JOIN tasks t ON ta.task_id = t.task_id
-                WHERE u.user_id NOT IN (
-                    SELECT ur.user_id
-                    FROM user_roles ur
-                    JOIN roles r ON ur.role_id = r.role_id
-                    WHERE UPPER(r.role_name) IN ('ADMIN','SUPER ADMIN')
-                )
-                ORDER BY u.fname
-            ";
-        
-            $result = mysqli_query($conn, $query);
-            
-            if ($result) {
-                $users = mysqli_fetch_all($result, MYSQLI_ASSOC);
-                
-                $response['success'] = true;
-                $response['data'] = array_map(function($row) {
-                    $user_data = [
-                        'id'   => $row['user_id'],
-                        'name' => trim($row['full_name']),
-                    ];
-        
-                    // Tag with a suggestion note if no task has been created.
-                    if (empty($row['task_created'])) {
-                        $user_data['suggestion_tag'] = 'Suggestion tag';
-                    }
-                    
-                    // Determine user availability based on whether a task was created today.
-                    $current_date      = date('Y-m-d');
-                    $task_created_date = !empty($row['task_created']) 
-                                         ? date('Y-m-d', strtotime($row['task_created'])) 
-                                         : '';
-        
-                    $user_data['availability'] = ($task_created_date === $current_date) 
-                                                 ? 'Not Available' 
-                                                 : 'Available';
-                    
-                    return $user_data;
-                }, $users);
-            } else {
-                $response['message'] = 'Failed to fetch users';
-            }
+        } else {
+            $response['message'] = 'Insufficient parameters provided';
         }
         break;
+    
     
     case 'check_conflicts':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -308,15 +257,14 @@ function createTaskWithPriorityHandling($task_name, $task_date, $start_time, $en
         'conflicts' => $conflicts
     ];
 }
-
 /**
  * Get available users for a task based on time and priority.
  *
  * SCENARIO 3 Clarification:
- * - Users already assigned to tasks with a higher or equal priority (lower or equal numeric value) 
+ * - Users already assigned to tasks with a higher priority (i.e. lower numeric value)
  *   will not appear in the suggestion list.
  * - For example, if Janzen and Karen are already assigned to a Research 2 task with priority 1,
- *   they are excluded when suggesting users for a new task.
+ *   they will still be available when suggesting users for a new task that has the same priority.
  *
  * @param string $task_date The date of the task
  * @param string $start_time Start time of the task
@@ -337,18 +285,18 @@ function getAvailableUsers($task_date, $start_time, $end_time, $priority_rating)
     while ($user = mysqli_fetch_assoc($result)) {
         $user_id = $user['user_id'];
         
-        // Check for any overlapping task with higher or equal priority
+        // Check for any overlapping task with a higher priority (lower numeric value)
         $conflict_query = "SELECT t.task_id 
                            FROM tasks t
                            JOIN task_assignments ta ON t.task_id = ta.task_id
                            WHERE ta.user_id = $user_id
                            AND t.task_date = '$task_date'
                            AND (t.start_time < '$end_time' AND t.end_time > '$start_time')
-                           AND t.priority_rating <= $priority_rating";
+                           AND t.priority_rating < $priority_rating";
                           
         $conflict_result = mysqli_query($conn, $conflict_query);
         
-        // Only include users without a conflicting high/equal priority task
+        // Only include users without a conflicting higher priority task
         if (mysqli_num_rows($conflict_result) == 0) {
             $available_users[] = [
                 'user_id' => $user_id,
