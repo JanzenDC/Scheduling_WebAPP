@@ -264,11 +264,11 @@ function createTaskWithPriorityHandling($task_name, $task_date, $start_time, $en
 /**
  * Get available users for a task based on time and priority.
  *
- * SCENARIO 3 Clarification:
- * - Users already assigned to tasks with a higher priority (i.e. lower numeric value)
- *   will not appear in the suggestion list.
- * - Users assigned to tasks with equal or lower priority will appear in the suggestion list
- *   as they can be reassigned if selected.
+ * Updated Logic:
+ * - Users already assigned to tasks with equal or higher priority (i.e. lower or equal numeric value)
+ *   will NOT appear in the suggestion list.
+ * - Only users with no conflicting tasks or those assigned to lower priority tasks will appear
+ *   in the suggestion list.
  *
  * @param string $task_date The date of the task
  * @param string $start_time Start time of the task
@@ -289,27 +289,27 @@ function getAvailableUsers($task_date, $start_time, $end_time, $priority_rating)
     while ($user = mysqli_fetch_assoc($result)) {
         $user_id = $user['user_id'];
         
-        // Check for any overlapping task with a higher priority (lower numeric value)
+        // Check for any overlapping task with an equal or higher priority (lower or equal numeric value)
         $conflict_query = "SELECT t.task_id 
                            FROM tasks t
                            JOIN task_assignments ta ON t.task_id = ta.task_id
                            WHERE ta.user_id = $user_id
                            AND t.task_date = '$task_date'
                            AND (t.start_time < '$end_time' AND t.end_time > '$start_time')
-                           AND t.priority_rating < $priority_rating";
+                           AND t.priority_rating <= $priority_rating";
                           
         $conflict_result = mysqli_query($conn, $conflict_query);
         
-        // Only include users without a conflicting higher priority task
+        // Only include users without a conflicting equal or higher priority task
         if (mysqli_num_rows($conflict_result) == 0) {
-            // Check if user has overlapping tasks with equal or lower priority
+            // Check if user has overlapping tasks with lower priority
             $task_info_query = "SELECT t.task_id, t.priority_rating 
                                FROM tasks t
                                JOIN task_assignments ta ON t.task_id = ta.task_id
                                WHERE ta.user_id = $user_id
                                AND t.task_date = '$task_date'
                                AND (t.start_time < '$end_time' AND t.end_time > '$start_time')
-                               AND t.priority_rating >= $priority_rating";
+                               AND t.priority_rating > $priority_rating";
             
             $task_info_result = mysqli_query($conn, $task_info_query);
             $has_overlapping_task = mysqli_num_rows($task_info_result) > 0;
@@ -318,7 +318,7 @@ function getAvailableUsers($task_date, $start_time, $end_time, $priority_rating)
                 'user_id' => $user_id,
                 'name' => trim($user['full_name']),
                 'availability' => $has_overlapping_task ? 
-                    'Currently in lower/equal priority task' : 'Available'
+                    'Currently in lower priority task' : 'Available'
             ];
         }
     }

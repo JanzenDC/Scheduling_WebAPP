@@ -77,18 +77,18 @@ switch ($action) {
                 // User has no conflicts, they're available
                 $available_users[] = $user;
             } else {
-                // Check if there's a higher priority task
-                $higher_priority_exists = false;
+                // Check if there's an equal or higher priority task
+                $equal_or_higher_priority_exists = false;
                 foreach ($user_conflicts as $conflict) {
-                    // Lower rating number means higher priority in your system
-                    if ((int)$conflict['priority_rating'] < (int)$priority_rating) {
-                        $higher_priority_exists = true;
+                    // Lower or equal rating number means equal or higher priority
+                    if ((int)$conflict['priority_rating'] <= (int)$priority_rating) {
+                        $equal_or_higher_priority_exists = true;
                         break;
                     }
                 }
                 
-                if ($higher_priority_exists) {
-                    // User is assigned to a higher priority task
+                if ($equal_or_higher_priority_exists) {
+                    // User is assigned to an equal or higher priority task
                     $conflicted_users[] = [
                         'user' => $user,
                         'conflicts' => $user_conflicts
