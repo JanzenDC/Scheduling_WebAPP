@@ -19,24 +19,28 @@ $action = $_GET['action'] ?? '';
 
 switch ($action) {
     case 'fetch_users':
-        // Check if we're fetching users for a specific task time slot and priority
-        $task_date = isset($_GET['task_date']) ? mysqli_real_escape_string($conn, $_GET['task_date']) : null;
-        $start_time = isset($_GET['start_time']) ? mysqli_real_escape_string($conn, $_GET['start_time']) : null;
-        $end_time = isset($_GET['end_time']) ? mysqli_real_escape_string($conn, $_GET['end_time']) : null;
-        $priority_rating = isset($_GET['priority']) ? mysqli_real_escape_string($conn, $_GET['priority']) : null;
-        
+        // Read POST data (since the AJAX call uses POST)
+        $task_date = isset($_POST['task_date']) ? mysqli_real_escape_string($conn, $_POST['task_date']) : null;
+        $start_time = isset($_POST['start_time']) ? mysqli_real_escape_string($conn, $_POST['start_time']) : null;
+        $end_time = isset($_POST['end_time']) ? mysqli_real_escape_string($conn, $_POST['end_time']) : null;
+        $priority_rating = isset($_POST['priority']) ? mysqli_real_escape_string($conn, $_POST['priority']) : null;
+
         if ($task_date && $start_time && $end_time && $priority_rating !== null) {
+            // getAvailableUsers should be implemented to return an array of users
             $available_users = getAvailableUsers($task_date, $start_time, $end_time, $priority_rating);
             
             $response['success'] = true;
+            // Return keys matching the JavaScript expectations
             $response['data'] = array_map(function($user) {
                 return [
-                    'id' => $user['user_id'],
-                    'name' => $user['name'],
-                    'availability' => $user['availability'],
+                    'user_id'   => $user['user_id'],
+                    'full_name' => $user['name'],       // Change as needed if your DB uses a different key
+                    'role_name' => $user['role_name'],    // Ensure this key exists in your DB result
+                    'availability' => $user['availability'] // Optional; include if needed
                 ];
             }, $available_users);
         } else {
+            $response['success'] = false;
             $response['message'] = 'Insufficient parameters provided';
         }
         break;
