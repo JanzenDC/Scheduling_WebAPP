@@ -33,7 +33,7 @@ switch ($action) {
                 return [
                     'id' => $user['user_id'],
                     'name' => $user['name'],
-                    'availability' => 'Available',
+                    'availability' => $user['availability'],
                 ];
             }, $available_users);
         } else {
@@ -263,8 +263,8 @@ function createTaskWithPriorityHandling($task_name, $task_date, $start_time, $en
  * SCENARIO 3 Clarification:
  * - Users already assigned to tasks with a higher priority (i.e. lower numeric value)
  *   will not appear in the suggestion list.
- * - For example, if Janzen and Karen are already assigned to a Research 2 task with priority 1,
- *   they will still be available when suggesting users for a new task that has the same priority.
+ * - Users assigned to tasks with equal or lower priority will appear in the suggestion list
+ *   as they can be reassigned if selected.
  *
  * @param string $task_date The date of the task
  * @param string $start_time Start time of the task
@@ -298,14 +298,26 @@ function getAvailableUsers($task_date, $start_time, $end_time, $priority_rating)
         
         // Only include users without a conflicting higher priority task
         if (mysqli_num_rows($conflict_result) == 0) {
+            // Check if user has overlapping tasks with equal or lower priority
+            $task_info_query = "SELECT t.task_id, t.priority_rating 
+                               FROM tasks t
+                               JOIN task_assignments ta ON t.task_id = ta.task_id
+                               WHERE ta.user_id = $user_id
+                               AND t.task_date = '$task_date'
+                               AND (t.start_time < '$end_time' AND t.end_time > '$start_time')
+                               AND t.priority_rating >= $priority_rating";
+            
+            $task_info_result = mysqli_query($conn, $task_info_query);
+            $has_overlapping_task = mysqli_num_rows($task_info_result) > 0;
+            
             $available_users[] = [
                 'user_id' => $user_id,
-                'name' => trim($user['full_name'])
+                'name' => trim($user['full_name']),
+                'availability' => $has_overlapping_task ? 
+                    'Currently in lower/equal priority task' : 'Available'
             ];
         }
     }
     
     return $available_users;
 }
-
-?>
