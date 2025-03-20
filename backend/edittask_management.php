@@ -417,41 +417,85 @@ switch ($action) {
 
 echo json_encode($response);
 mysqli_close($conn);
+/**
+ * Helper: Get the full name of a user.
+ */
+function getUserFullName($user_id) {
+    global $conn;
+    $query = "SELECT CONCAT(fname, ' ', COALESCE(mname, ''), ' ', lname) as full_name FROM users WHERE user_id = $user_id";
+    $result = mysqli_query($conn, $query);
+    if ($result && mysqli_num_rows($result) > 0) {
+        $row = mysqli_fetch_assoc($result);
+        return trim($row['full_name']);
+    }
+    return "User $user_id";
+}
 
-function checkConflicts($task_date, $start_time, $end_time, $user_ids, $current_priority_rating) {
+/**
+ * Updated checkConflicts function.
+ *
+ * Checks each user in the $assigned_users list to see if they already have an overlapping task on the same date.
+ * For each overlapping task:
+ * - If the new task has a higher priority (lower numeric value), the conflict is not flagged (user will be reassigned).
+ * - If the new task has equal or lower priority, a conflict is recorded.
+ *
+ * The $exclude_task_id parameter is used to ignore the task being updated.
+ *
+ * @param string $task_date
+ * @param string $start_time
+ * @param string $end_time
+ * @param array $assigned_users
+ * @param int $priority_rating
+ * @param int $exclude_task_id
+ * @return array List of conflict details.
+ */
+function checkConflicts($task_date, $start_time, $end_time, $assigned_users, $priority_rating, $exclude_task_id = 0) {
     global $conn;
     $conflicts = [];
-    foreach ($user_ids as $user_id) {
-        $user_id = mysqli_real_escape_string($conn, $user_id);
-        $query = "SELECT t.task_name, t.start_time, t.end_time, t.priority_rating,
-                         CONCAT(u.fname, ' ', COALESCE(u.mname, ''), ' ', u.lname) as user_name,
-                         r.role_name as role
-                  FROM tasks t 
-                  JOIN task_assignments ta ON t.task_id = ta.task_id 
-                  JOIN users u ON ta.user_id = u.user_id
-                  JOIN user_roles ur ON u.user_id = ur.user_id
-                  JOIN roles r ON ur.role_id = r.role_id
-                  WHERE ta.user_id = $user_id 
-                    AND t.task_date = '$task_date' 
-                    AND (t.start_time < '$end_time' AND t.end_time > '$start_time')";
-        $result = mysqli_query($conn, $query);
-        if ($result && mysqli_num_rows($result) > 0) {
-            while ($row = mysqli_fetch_assoc($result)) {
-                if ($row['priority_rating'] < $current_priority_rating) {
-                    $start_time_12hr = date("g:i A", strtotime($row['start_time']));
-                    $end_time_12hr   = date("g:i A", strtotime($row['end_time']));
-                    $suggestions = [];
-                    if (strtolower($row['role']) === 'permanent') {
-                        $suggestions = suggestReplacement($task_date, $start_time, $end_time, $user_id);
-                    }
+    
+    foreach ($assigned_users as $user_id) {
+        $conflict_query = "SELECT t.task_id, t.task_name, t.priority_rating, t.start_time, t.end_time
+                           FROM tasks t
+                           JOIN task_assignments ta ON t.task_id = ta.task_id
+                           WHERE ta.user_id = $user_id
+                           AND t.task_date = '$task_date'
+                           " . ($exclude_task_id ? "AND t.task_id <> $exclude_task_id" : "") . "
+                           AND (t.start_time < '$end_time' AND t.end_time > '$start_time')";
+        $conflict_result = mysqli_query($conn, $conflict_query);
+        
+        if ($conflict_result && mysqli_num_rows($conflict_result) > 0) {
+            // Loop through each overlapping task
+            while ($conflict_task = mysqli_fetch_assoc($conflict_result)) {
+                // New task has higher priority (lower number) than the conflicting task:
+                // Allow removal and reassignment.
+                if ($priority_rating < $conflict_task['priority_rating']) {
+                    continue;
+                }
+                // Equal priority: conflict exists.
+                else if ($priority_rating == $conflict_task['priority_rating']) {
                     $conflicts[] = [
-                        'user_name'   => trim($row['user_name']),
-                        'task_name'   => $row['task_name'],
-                        'start_time'  => $start_time_12hr,
-                        'end_time'    => $end_time_12hr,
-                        'role'        => $row['role'],
-                        'suggestions' => $suggestions
+                        'user_id'    => $user_id,
+                        'user_name'  => getUserFullName($user_id),
+                        'task_id'    => $conflict_task['task_id'],
+                        'task_name'  => $conflict_task['task_name'],
+                        'start_time' => $conflict_task['start_time'],
+                        'end_time'   => $conflict_task['end_time'],
+                        'reason'     => 'Already assigned to a task with the same priority'
                     ];
+                    break;
+                }
+                // New task has lower priority (higher number): conflict exists.
+                else {
+                    $conflicts[] = [
+                        'user_id'    => $user_id,
+                        'user_name'  => getUserFullName($user_id),
+                        'task_id'    => $conflict_task['task_id'],
+                        'task_name'  => $conflict_task['task_name'],
+                        'start_time' => $conflict_task['start_time'],
+                        'end_time'   => $conflict_task['end_time'],
+                        'reason'     => 'Already assigned to a higher priority task'
+                    ];
+                    break;
                 }
             }
         }

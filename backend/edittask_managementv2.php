@@ -107,31 +107,29 @@ switch ($action) {
                 return $conflicted['user']['number_of_deals'];
             }, $conflicted_users);
             
-            // Find users with same or next higher deals who are available
+            $suggested_replacements = [];
+            $added_user_ids = []; // Para subaybayan na mga user na naidagdag na
+            
+            // Hanapin ang mga available user na may parehong number_of_deals o next higher
             foreach ($available_users as $user) {
-                // Check if user is designated or not based on your logic
+                // I-check kung designated o hindi base sa iyong logic
                 $is_designated = ($user['has_designation'] == 'yes');
                 
-                // Match same number_of_deals or next higher
+                // Kung tugma ang number_of_deals o next higher
                 if (in_array($user['number_of_deals'], $deals_to_match) || 
                     ($user['number_of_deals'] > min($deals_to_match) && 
-                     $user['number_of_deals'] <= min($deals_to_match) + 1)) {
+                    $user['number_of_deals'] <= min($deals_to_match) + 1)) {
                     
-                    // Add to suggested replacements with designation info
-                    $suggested_replacements[] = array_merge($user, ['is_designated' => $is_designated]);
+                    // Idagdag lang kung hindi pa naidagdag
+                    if (!in_array($user['user_id'], $added_user_ids)) {
+                        $suggested_replacements[] = array_merge($user, ['is_designated' => $is_designated]);
+                        $added_user_ids[] = $user['user_id'];
+                    }
                 }
             }
-            
-            // Sort suggested replacements: designated personnel first, then by number_of_deals
-            usort($suggested_replacements, function($a, $b) {
-                // First by designation (designated first)
-                if ($a['is_designated'] != $b['is_designated']) {
-                    return $b['is_designated'] <=> $a['is_designated'];
-                }
-                // Then by number_of_deals (lower number first)
-                return $a['number_of_deals'] <=> $b['number_of_deals'];
-            });
         }
+
+
         
         // Step 5: Prepare response
         $response['success'] = true;
