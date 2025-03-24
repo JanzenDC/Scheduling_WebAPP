@@ -22,7 +22,7 @@ switch ($action) {
         $task_date = $_POST['task-date'] ?? null;
         $start_time = $_POST['start-time'] ?? null;
         $end_time = $_POST['end-time'] ?? null;
-        $priority_rating = $_POST['priority-rating'] ?? 0; // Priority of the new task
+        $priority_rating = $_POST['priority-rating'] ?? 0; // Get the priority of the current task
     
         if (!$task_date || !$start_time || !$end_time) {
             $response['message'] = 'Task date, start time, and end time are required.';
@@ -30,7 +30,7 @@ switch ($action) {
             exit;
         }
     
-        // Step 1: Retrieve all users.
+        // Step 1: Get all users
         $query = "SELECT u.user_id, CONCAT(u.fname, ' ', COALESCE(u.mname, ''), ' ', u.lname) AS full_name, 
                   COALESCE(r.role_name, '') AS role_name, 
                   u.number_of_deals,
@@ -40,103 +40,94 @@ switch ($action) {
                   LEFT JOIN user_roles ur ON u.user_id = ur.user_id 
                   LEFT JOIN roles r ON ur.role_id = r.role_id 
                   ORDER BY u.fname";
-        
+    
         $stmt = mysqli_prepare($conn, $query);
         mysqli_stmt_execute($stmt);
         $result = mysqli_stmt_get_result($stmt);
         $all_users = mysqli_fetch_all($result, MYSQLI_ASSOC);
-        
-        // Step 2: Identify users with schedule conflicts.
+    
+        // Step 2: Identify users with conflicting tasks
         $conflict_query = "
             SELECT ta.user_id, t.priority_rating, t.rating, t.task_id, t.task_name 
             FROM task_assignments ta 
             JOIN tasks t ON ta.task_id = t.task_id 
             WHERE t.task_date = ? AND (
-                (t.start_time <= ? AND t.end_time > ?) OR    -- Overlap at start time
-                (t.start_time < ? AND t.end_time >= ?) OR      -- Overlap at end time
-                (t.start_time >= ? AND t.end_time <= ?)         -- Task completely within the new task’s time
+                (t.start_time <= ? AND t.end_time > ?) OR
+                (t.start_time < ? AND t.end_time >= ?) OR
+                (t.start_time >= ? AND t.end_time <= ?)
             )";
-        
+    
         $stmt = mysqli_prepare($conn, $conflict_query);
         mysqli_stmt_bind_param($stmt, "sssssss", $task_date, $start_time, $start_time, $end_time, $end_time, $start_time, $end_time);
         mysqli_stmt_execute($stmt);
         $conflicts_result = mysqli_stmt_get_result($stmt);
         $conflicts = mysqli_fetch_all($conflicts_result, MYSQLI_ASSOC);
-        
-        // Step 3: Apply the conflict resolution logic.
+    
+        // Step 3: Apply conflict resolution logic
         $available_users = [];
         $conflicted_users = [];
         $suggested_replacements = [];
-        
+    
         foreach ($all_users as $user) {
-            // Find all conflicting assignments for this user.
             $user_conflicts = array_filter($conflicts, function($conflict) use ($user) {
                 return $conflict['user_id'] == $user['user_id'];
             });
-            
+    
             if (empty($user_conflicts)) {
-                // No conflict: user is available.
+                // User has no conflicts, they're available
                 $available_users[] = $user;
             } else {
-                // Check if any conflicting task has an equal or higher priority compared to the new task.
-                $equal_or_higher_priority_exists = false;
+                // Check if user is involved in any higher-priority task
+                $has_higher_priority_task = false;
                 foreach ($user_conflicts as $conflict) {
-                    // Note: Lower or equal rating number means equal or higher priority.
-                    // If the existing task's rating is less than or equal to the new task's rating,
-                    // then the user is busy with a task of equal or higher priority.
-                    if ((int)$conflict['priority_rating'] <= (int)$priority_rating) {
-                        $equal_or_higher_priority_exists = true;
+                    if ((int)$conflict['priority_rating'] < (int)$priority_rating) {
+                        $has_higher_priority_task = true;
                         break;
                     }
                 }
-                
-                if ($equal_or_higher_priority_exists) {
-                    // User is assigned to at least one conflicting task that is of equal or higher priority.
+    
+                if ($has_higher_priority_task) {
+                    // Do NOT suggest, user is on higher priority task
                     $conflicted_users[] = [
                         'user' => $user,
                         'conflicts' => $user_conflicts
                     ];
                 } else {
-                    // All conflicting tasks have lower priority than the new task,
-                    // so the user can be reassigned to this new, higher-priority task.
+                    // All conflicts are lower-priority, suggestable
                     $available_users[] = $user;
                 }
             }
         }
-        
-        // Step 4: (Optional) Find potential replacement candidates for conflicted users.
+    
+        // Step 4: Find potential replacements for conflicted users
         if (!empty($conflicted_users)) {
-            // Get the deal numbers from the conflicted users for matching.
             $deals_to_match = array_map(function($conflicted) {
                 return $conflicted['user']['number_of_deals'];
             }, $conflicted_users);
-            
-            $suggested_replacements = [];
-            $added_user_ids = []; // Track already added users.
-            
-            // Find available users whose number_of_deals is matching or next higher.
+    
             foreach ($available_users as $user) {
-                // Determine if user has a designation based on your logic.
                 $is_designated = ($user['has_designation'] == 'yes');
-                
-                // Check if the user's deal number matches or is just above the minimum in conflicted users.
+    
                 if (in_array($user['number_of_deals'], $deals_to_match) || 
                     ($user['number_of_deals'] > min($deals_to_match) && 
                      $user['number_of_deals'] <= min($deals_to_match) + 1)) {
-                    
-                    // Add only if not already added.
-                    if (!in_array($user['user_id'], $added_user_ids)) {
-                        $suggested_replacements[] = array_merge($user, ['is_designated' => $is_designated]);
-                        $added_user_ids[] = $user['user_id'];
-                    }
+    
+                    $suggested_replacements[] = array_merge($user, ['is_designated' => $is_designated]);
                 }
             }
+    
+            usort($suggested_replacements, function($a, $b) {
+                if ($a['is_designated'] != $b['is_designated']) {
+                    return $b['is_designated'] <=> $a['is_designated'];
+                }
+                return $a['number_of_deals'] <=> $b['number_of_deals'];
+            });
         }
-        
-        // Step 5: Prepare the response.
+    
+        // Step 5: Prepare response
         $response['success'] = true;
         $response['data'] = $available_users;
-        
+    
         if (!empty($conflicted_users)) {
             $response['conflicted_users'] = array_map(function($conflicted) {
                 return [
@@ -149,15 +140,18 @@ switch ($action) {
                 ];
             }, $conflicted_users);
         }
-        
+    
         if (!empty($suggested_replacements)) {
             $response['suggested_replacements'] = $suggested_replacements;
         }
-        
+    
         if (empty($available_users) && empty($suggested_replacements)) {
             $response['message'] = 'No available users without conflicting tasks.';
         }
+    
+        echo json_encode($response);
         break;
+    
     
     case 'check_conflicts':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
