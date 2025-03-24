@@ -149,7 +149,6 @@ switch ($action) {
             $response['message'] = 'No available users without conflicting tasks.';
         }
     
-        echo json_encode($response);
         break;
     
     
