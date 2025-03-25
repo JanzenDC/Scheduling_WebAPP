@@ -22,8 +22,7 @@ switch ($action) {
         $task_date = $_POST['task-date'] ?? null;
         $start_time = $_POST['start-time'] ?? null;
         $end_time = $_POST['end-time'] ?? null;
-        $priority_rating = $_POST['priority-rating'] ?? 0; // Get the priority of the current task
-    
+        
         if (!$task_date || !$start_time || !$end_time) {
             $response['message'] = 'Task date, start time, and end time are required.';
             echo json_encode($response);
@@ -63,93 +62,28 @@ switch ($action) {
         $conflicts_result = mysqli_stmt_get_result($stmt);
         $conflicts = mysqli_fetch_all($conflicts_result, MYSQLI_ASSOC);
     
-        // Step 3: Apply conflict resolution logic
+        // Step 3: Filter available users who do NOT have any conflicting tasks
         $available_users = [];
-        $conflicted_users = [];
-        $suggested_replacements = [];
-    
         foreach ($all_users as $user) {
             $user_conflicts = array_filter($conflicts, function($conflict) use ($user) {
                 return $conflict['user_id'] == $user['user_id'];
             });
     
             if (empty($user_conflicts)) {
-                // User has no conflicts, they're available
+                // User has no conflicting tasks—add them to the available list.
                 $available_users[] = $user;
-            } else {
-                // Check if user is involved in any higher-priority task
-                $has_higher_priority_task = false;
-                foreach ($user_conflicts as $conflict) {
-                    if ((int)$conflict['priority_rating'] < (int)$priority_rating) {
-                        $has_higher_priority_task = true;
-                        break;
-                    }
-                }
-    
-                if ($has_higher_priority_task) {
-                    // Do NOT suggest, user is on higher priority task
-                    $conflicted_users[] = [
-                        'user' => $user,
-                        'conflicts' => $user_conflicts
-                    ];
-                } else {
-                    // All conflicts are lower-priority, suggestable
-                    $available_users[] = $user;
-                }
             }
         }
     
-        // Step 4: Find potential replacements for conflicted users
-        if (!empty($conflicted_users)) {
-            $deals_to_match = array_map(function($conflicted) {
-                return $conflicted['user']['number_of_deals'];
-            }, $conflicted_users);
-    
-            foreach ($available_users as $user) {
-                $is_designated = ($user['has_designation'] == 'yes');
-    
-                if (in_array($user['number_of_deals'], $deals_to_match) || 
-                    ($user['number_of_deals'] > min($deals_to_match) && 
-                     $user['number_of_deals'] <= min($deals_to_match) + 1)) {
-    
-                    $suggested_replacements[] = array_merge($user, ['is_designated' => $is_designated]);
-                }
-            }
-    
-            usort($suggested_replacements, function($a, $b) {
-                if ($a['is_designated'] != $b['is_designated']) {
-                    return $b['is_designated'] <=> $a['is_designated'];
-                }
-                return $a['number_of_deals'] <=> $b['number_of_deals'];
-            });
-        }
-    
-        // Step 5: Prepare response
+        // Step 4: Prepare response
         $response['success'] = true;
         $response['data'] = $available_users;
-    
-        if (!empty($conflicted_users)) {
-            $response['conflicted_users'] = array_map(function($conflicted) {
-                return [
-                    'user_id' => $conflicted['user']['user_id'],
-                    'full_name' => $conflicted['user']['full_name'],
-                    'role_name' => $conflicted['user']['role_name'],
-                    'number_of_deals' => $conflicted['user']['number_of_deals'],
-                    'designation' => $conflicted['user']['designation'],
-                    'conflict_details' => $conflicted['conflicts']
-                ];
-            }, $conflicted_users);
-        }
-    
-        if (!empty($suggested_replacements)) {
-            $response['suggested_replacements'] = $suggested_replacements;
-        }
-    
-        if (empty($available_users) && empty($suggested_replacements)) {
+        if (empty($available_users)) {
             $response['message'] = 'No available users without conflicting tasks.';
         }
     
         break;
+    
     
     
     case 'save_task':
