@@ -45,7 +45,7 @@ switch ($action) {
         $result = mysqli_stmt_get_result($stmt);
         $all_users = mysqli_fetch_all($result, MYSQLI_ASSOC);
     
-        // Step 2: Identify users with conflicting tasks
+        // Step 2: Identify users with overlapping tasks
         $conflict_query = "
             SELECT ta.user_id, t.priority_rating, t.rating, t.task_id, t.task_name 
             FROM task_assignments ta 
@@ -62,15 +62,14 @@ switch ($action) {
         $conflicts_result = mysqli_stmt_get_result($stmt);
         $conflicts = mysqli_fetch_all($conflicts_result, MYSQLI_ASSOC);
     
-        // Step 3: Filter available users who do NOT have any conflicting tasks
+        // Step 3: Filter available users, excluding any with a task of priority rating 1.
         $available_users = [];
         foreach ($all_users as $user) {
             $user_conflicts = array_filter($conflicts, function($conflict) use ($user) {
-                return $conflict['user_id'] == $user['user_id'];
+                return $conflict['user_id'] == $user['user_id'] && (int)$conflict['priority_rating'] === 1;
             });
-    
+        
             if (empty($user_conflicts)) {
-                // User has no conflicting tasks—add them to the available list.
                 $available_users[] = $user;
             }
         }
@@ -79,10 +78,11 @@ switch ($action) {
         $response['success'] = true;
         $response['data'] = $available_users;
         if (empty($available_users)) {
-            $response['message'] = 'No available users without conflicting tasks.';
+            $response['message'] = 'No available users without conflicting tasks with priority rating 1.';
         }
-    
+        
         break;
+    
     
     
     

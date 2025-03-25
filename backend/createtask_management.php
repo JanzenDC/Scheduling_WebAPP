@@ -280,14 +280,15 @@ function createTaskWithPriorityHandling($task_name, $task_date, $start_time, $en
     $conflicts = [];
     $available_users = [];
     
-    // Pre-check: loop through each user and check for any task on the same date
-    // regardless of time that has a higher (or equal) priority.
+    // Pre-check: loop through each user and check for any overlapping task on the same date
+    // that has a higher (or equal) priority.
     foreach ($user_ids as $user_id) {
         $conflict_query = "SELECT t.task_id, t.task_name, t.priority_rating 
                            FROM tasks t
                            JOIN task_assignments ta ON t.task_id = ta.task_id
                            WHERE ta.user_id = $user_id
-                           AND t.task_date = '$task_date'";
+                           AND t.task_date = '$task_date'
+                           AND ('$start_time' < t.end_time AND '$end_time' > t.start_time)";
                            
         $conflict_result = mysqli_query($conn, $conflict_query);
         $userHasConflict = false;
