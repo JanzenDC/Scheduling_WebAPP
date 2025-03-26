@@ -14,13 +14,12 @@ require_once('../vendor/autoload.php');
 date_default_timezone_set('Asia/Singapore');  // Force PHP to use UTC+8
 mysqli_query($conn, "SET time_zone = '+08:00'"); // Force MySQL to use UTC+8
 // ------------------- ADDED LINES END --------------------- //
-
 use Brevo\Client\Configuration;
 use Brevo\Client\Api\TransactionalEmailsApi;
 use Brevo\Client\Model\SendSmtpEmail;
 
 // Configure API key for Brevo
-$config = Configuration::getDefaultConfiguration()->setApiKey('api-key', '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');
+$config = Configuration::getDefaultConfiguration()->setApiKey('api-key', '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');
 
 // Create Brevo API instance
 $apiInstance = new TransactionalEmailsApi(
