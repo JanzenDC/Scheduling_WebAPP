@@ -125,7 +125,7 @@ function editTask(targetID) {
                         </div>
                         <div class="mb-4">
                             <label class="block text-sm font-medium mb-1" for="priority_rating">Priority Rating</label>
-                            <select id="priority_rating" class="w-full px-3 py-2 border rounded-md" required>
+                            <select id="priority_rating" class="w-full px-3 py-2 border rounded-md" required disabled>
                                 ${priorityOptions}
                             </select>
                         </div>

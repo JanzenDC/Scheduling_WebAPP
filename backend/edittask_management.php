@@ -211,45 +211,82 @@ switch ($action) {
     case 'update':
         $task_id = $_POST['task_id'] ?? 0;
         $task_name = $_POST['task_name'] ?? '';
-        $task_date = $_POST['task_date'] ?? '';
-        $start_time = $_POST['start_time'] ?? '';
-        $end_time = $_POST['end_time'] ?? '';
-        $priority_rating = $_POST['priority_rating'] ?? 0;
+        $new_task_date = $_POST['task_date'] ?? '';
+        $new_start_time = $_POST['start_time'] ?? '';
+        $new_end_time = $_POST['end_time'] ?? '';
+        // Note: priority_rating is read-only and will NOT be updated.
         $assigned_users = $_POST['assigned_users'] ?? [];
-        $conflicts = checkConflicts($task_date, $start_time, $end_time, $assigned_users, $priority_rating);
-        if (!empty($conflicts)) {
-            $conflictMessages = [];
-            foreach ($conflicts as $conflict) {
-                $conflictMessages[] = "{$conflict['user_name']} has a conflict with task '{$conflict['task_name']}' scheduled from {$conflict['start_time']} to {$conflict['end_time']}.";
+    
+        // First, fetch the current task details.
+        $current_query = "SELECT task_date, start_time, end_time FROM tasks WHERE task_id = ?";
+        $stmt = mysqli_prepare($conn, $current_query);
+        mysqli_stmt_bind_param($stmt, "i", $task_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $current_task = mysqli_fetch_assoc($result);
+    
+        // Check if the date or time has changed.
+        $date_or_time_changed = false;
+        if ($current_task) {
+            if (
+                $current_task['task_date'] !== $new_task_date ||
+                $current_task['start_time'] !== $new_start_time ||
+                $current_task['end_time'] !== $new_end_time
+            ) {
+                $date_or_time_changed = true;
             }
-            $detailedConflictMsg = implode(" ", $conflictMessages);
-            $response['success'] = false;
-            $response['message'] = "Task scheduling conflicts detected: " . $detailedConflictMsg . " Please review the conflicts and suggested replacements.";
-            $response['data'] = $conflicts;
-            echo json_encode($response);
-            exit;
         }
+    
         mysqli_begin_transaction($conn);
         try {
+            // Update task details (without updating priority_rating)
             $update_sql = "UPDATE tasks SET task_name = ?, task_date = ?, start_time = ?, end_time = ? WHERE task_id = ?";
             $stmt = mysqli_prepare($conn, $update_sql);
-            mysqli_stmt_bind_param($stmt, "ssssi", $task_name, $task_date, $start_time, $end_time, $task_id);
+            mysqli_stmt_bind_param($stmt, "ssssi", $task_name, $new_task_date, $new_start_time, $new_end_time, $task_id);
             mysqli_stmt_execute($stmt);
-            $delete_sql = "DELETE FROM task_assignments WHERE task_id = ?";
-            $stmt = mysqli_prepare($conn, $delete_sql);
-            mysqli_stmt_bind_param($stmt, "i", $task_id);
-            mysqli_stmt_execute($stmt);
+    
+            if ($date_or_time_changed) {
+                // Clear all previous assignments if date or time is updated.
+                $delete_sql = "DELETE FROM task_assignments WHERE task_id = ?";
+                $stmt = mysqli_prepare($conn, $delete_sql);
+                mysqli_stmt_bind_param($stmt, "i", $task_id);
+                mysqli_stmt_execute($stmt);
+    
+                // Retrieve available users based on new date/time.
+                $available_users = fetchAvailableUsers($new_task_date, $new_start_time, $new_end_time);
+            } else {
+                // When date/time remains unchanged, keep existing assignments.
+                // Still, fetch available users for potential new assignments.
+                $available_users = fetchAvailableUsers($new_task_date, $new_start_time, $new_end_time);
+            }
+    
+            // Process new assigned users:
+            // If date/time has changed, previous assignments have been cleared.
+            // If not, add new users to the existing ones.
             if (!empty($assigned_users)) {
                 $insert_sql = "INSERT INTO task_assignments (task_id, user_id) VALUES (?, ?)";
                 $stmt = mysqli_prepare($conn, $insert_sql);
                 foreach ($assigned_users as $user_id) {
-                    mysqli_stmt_bind_param($stmt, "ii", $task_id, $user_id);
-                    mysqli_stmt_execute($stmt);
+                    // Optionally check if the user is available.
+                    // Here, we check against the list of available users by user_id.
+                    $userAvailable = false;
+                    foreach ($available_users as $user) {
+                        if ($user['user_id'] == $user_id) {
+                            $userAvailable = true;
+                            break;
+                        }
+                    }
+                    if ($userAvailable) {
+                        mysqli_stmt_bind_param($stmt, "ii", $task_id, $user_id);
+                        mysqli_stmt_execute($stmt);
+                    }
                 }
             }
+    
             mysqli_commit($conn);
             $response['success'] = true;
             $response['message'] = 'Task updated successfully.';
+            $response['available_users'] = $available_users;
         } catch (Exception $e) {
             mysqli_rollback($conn);
             $response['success'] = false;
@@ -417,6 +454,69 @@ switch ($action) {
 
 echo json_encode($response);
 mysqli_close($conn);
+/**
+ * Fetch available users based on task date and time using your provided logic.
+ *
+ * This function replicates the process from your 'fetch_users' case:
+ *   1. Retrieves all users.
+ *   2. Checks for overlapping tasks on the given date/time.
+ *   3. Excludes any users who have tasks with a priority_rating of 1.
+ *
+ * @param string $task_date
+ * @param string $start_time
+ * @param string $end_time
+ * @return array List of available user details.
+ */
+function fetchAvailableUsers($task_date, $start_time, $end_time) {
+    global $conn;
+    
+    // Step 1: Get all users.
+    $query = "SELECT u.user_id, CONCAT(u.fname, ' ', COALESCE(u.mname, ''), ' ', u.lname) AS full_name, 
+              COALESCE(r.role_name, '') AS role_name, 
+              u.number_of_deals,
+              u.has_designation,
+              u.designation
+              FROM users u 
+              LEFT JOIN user_roles ur ON u.user_id = ur.user_id 
+              LEFT JOIN roles r ON ur.role_id = r.role_id 
+              ORDER BY u.fname";
+    
+    $stmt = mysqli_prepare($conn, $query);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    $all_users = mysqli_fetch_all($result, MYSQLI_ASSOC);
+    
+    // Step 2: Identify users with overlapping tasks.
+    $conflict_query = "
+        SELECT ta.user_id, t.priority_rating, t.rating, t.task_id, t.task_name 
+        FROM task_assignments ta 
+        JOIN tasks t ON ta.task_id = t.task_id 
+        WHERE t.task_date = ? AND (
+            (t.start_time <= ? AND t.end_time > ?) OR
+            (t.start_time < ? AND t.end_time >= ?) OR
+            (t.start_time >= ? AND t.end_time <= ?)
+        )";
+    
+    $stmt = mysqli_prepare($conn, $conflict_query);
+    mysqli_stmt_bind_param($stmt, "sssssss", $task_date, $start_time, $start_time, $end_time, $end_time, $start_time, $end_time);
+    mysqli_stmt_execute($stmt);
+    $conflicts_result = mysqli_stmt_get_result($stmt);
+    $conflicts = mysqli_fetch_all($conflicts_result, MYSQLI_ASSOC);
+    
+    // Step 3: Filter available users, excluding those with a conflicting task of priority rating 1.
+    $available_users = [];
+    foreach ($all_users as $user) {
+        $user_conflicts = array_filter($conflicts, function($conflict) use ($user) {
+            return $conflict['user_id'] == $user['user_id'] && (int)$conflict['priority_rating'] === 1;
+        });
+    
+        if (empty($user_conflicts)) {
+            $available_users[] = $user;
+        }
+    }
+    
+    return $available_users;
+}
 /**
  * Helper: Get the full name of a user.
  */
