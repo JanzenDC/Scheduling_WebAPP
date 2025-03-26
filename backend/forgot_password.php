@@ -19,7 +19,7 @@ use Brevo\Client\Api\TransactionalEmailsApi;
 use Brevo\Client\Model\SendSmtpEmail;
 
 // Configure API key for Brevo
-$config = Configuration::getDefaultConfiguration()->setApiKey('api-key', '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');
+$config = Configuration::getDefaultConfiguration()->setApiKey('api-key', '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');
 
 // Create Brevo API instance
 $apiInstance = new TransactionalEmailsApi(
