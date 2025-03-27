@@ -288,8 +288,8 @@ function createTaskWithPriorityHandling($task_name, $task_date, $start_time, $en
                            JOIN task_assignments ta ON t.task_id = ta.task_id
                            WHERE ta.user_id = $user_id
                            AND t.task_date = '$task_date'
-                           AND ('$start_time' < t.end_time AND '$end_time' > t.start_time)";
-                           
+                           ";
+                        //    AND ('$start_time' < t.end_time AND '$end_time' > t.start_time)
         $conflict_result = mysqli_query($conn, $conflict_query);
         $userHasConflict = false;
         $to_reassign = [];
